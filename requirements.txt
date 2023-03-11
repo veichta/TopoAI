@@ -3,3 +3,4 @@ pytorch
 torchvision
 opencv
 matplotlib
+wandb

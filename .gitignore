@@ -6,6 +6,11 @@ data.nosync/model_output/*
 
 **.DS_Store
 
+wandb/**
+
+# custom extensions
+*.zip
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

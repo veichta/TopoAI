@@ -209,14 +209,15 @@ def extract_patches(
         for img_patch, mask_patch, weight_patch in zip(img_patches, mask_patches, weight_patches):
             if not is_white_image(img_patch) and contains_road(mask_patch):
                 save_image(
-                    img_patch, os.path.join(args.output, "images", f"{img_id}_{dataset}.jpg")
+                    img_patch, os.path.join(args.output, "images", f"{img_id:09d}_{dataset}.jpg")
                 )
                 save_image(
-                    mask_patch * 255, os.path.join(args.output, "masks", f"{img_id}_{dataset}.png")
+                    mask_patch * 255,
+                    os.path.join(args.output, "masks", f"{img_id:09d}_{dataset}.png"),
                 )
                 save_image(
                     weight_patch,
-                    os.path.join(args.output, "weights", f"{img_id}_{dataset}.png"),
+                    os.path.join(args.output, "weights", f"{img_id:09d}_{dataset}.png"),
                 )
                 img_id += 1
             else:
