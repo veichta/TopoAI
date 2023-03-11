@@ -1,3 +1,11 @@
+# Folders
+data.nosync/raw/*
+data.nosync/processed/*
+data.nosync/model_checkpoints/*
+data.nosync/model_output/*
+
+**.DS_Store
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
