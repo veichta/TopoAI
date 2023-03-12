@@ -16,9 +16,11 @@ pip install -e .
 | Name          | URL                                                                        | #images |
 | ------------- | -------------------------------------------------------------------------- | ------- |
 | CIL           | https://www.kaggle.com/competitions/cil-road-segmentation-2022             | -       |
-| DeepGlobe     | https://www.kaggle.com/datasets/balraj98/deepglobe-road-extraction-dataset | -       |
 | EPFL          | https://www.aicrowd.com/challenges/epfl-ml-road-segmentation               | -       |
+| DeepGlobe     | https://www.kaggle.com/datasets/balraj98/deepglobe-road-extraction-dataset | -       |
 | Massachusetts | https://www.kaggle.com/datasets/balraj98/massachusetts-roads-dataset       | -       |
+| RoadTracer    | https://paperswithcode.com/dataset/roadtracer                              | -       |
+| Topo-Boundary | https://tonyxuqaq.github.io/projects/topo-boundary/                        | -       |
 
 The preprocessed data can be downloaded using the following command:
 ```bash
