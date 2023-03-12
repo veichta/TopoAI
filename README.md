@@ -19,3 +19,7 @@ pip install -e .
 | DeepGlobe     | https://www.kaggle.com/datasets/balraj98/deepglobe-road-extraction-dataset | -       |
 | EPFL          | https://www.aicrowd.com/challenges/epfl-ml-road-segmentation               | -       |
 | Massachusetts | https://www.kaggle.com/datasets/balraj98/massachusetts-roads-dataset       | -       |
+The preprocessed data can be downloaded using the following command:
+```bash
+wget https://polybox.ethz.ch/index.php/s/mPtk999prM80ACx/download
+```
