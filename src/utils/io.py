@@ -5,7 +5,7 @@ from PIL import Image
 
 
 def load_image(path: str) -> np.ndarray:
-    """Load image from path.
+    """Load normalized image from path.
 
     Args:
         path (str): Path to image.
@@ -13,7 +13,7 @@ def load_image(path: str) -> np.ndarray:
     Returns:
         np.ndarray: Image as numpy array.
     """
-    return np.array(Image.open(path))
+    return np.array(Image.open(path)) / 255.0
 
 
 def load_mask(path: str) -> np.ndarray:
@@ -34,6 +34,18 @@ def load_mask(path: str) -> np.ndarray:
         mask = mask[:, :, 0]
 
     return mask
+
+
+def load_weight(path: str) -> np.ndarray:
+    """Load weight from path.
+
+    Args:
+        path (str): Path to weight.
+
+    Returns:
+        np.ndarray: Weight as numpy array.
+    """
+    return np.array(Image.open(path))
 
 
 def save_image(img: np.ndarray, path: str) -> None:
