@@ -151,9 +151,19 @@ def get_splits(datasets: List[str], args: argparse.Namespace):
     weights = list_dir(os.path.join(args.data_path, "weights"))
 
     if DatasetEnum.ALL.value not in datasets:
-        images = [image for image in images if any(dataset in image for dataset in datasets)]
-        masks = [mask for mask in masks if any(dataset in mask for dataset in datasets)]
-        weights = [weight for weight in weights if any(dataset in weight for dataset in datasets)]
+        images = [
+            image
+            for image in images
+            if any(dataset in image.split("/")[-1] for dataset in datasets)
+        ]
+        masks = [
+            mask for mask in masks if any(dataset in mask.split("/")[-1] for dataset in datasets)
+        ]
+        weights = [
+            weight
+            for weight in weights
+            if any(dataset in weight.split("/")[-1] for dataset in datasets)
+        ]
 
     images = sorted(images)
     masks = sorted(masks)
