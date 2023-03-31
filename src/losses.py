@@ -4,6 +4,17 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 
+def normalize_weights(weights: torch.tensor) -> torch.tensor:
+    """Normalize weights to [0, 1] along the batch dimension.
+
+    Args:
+        weights (torch.tensor):
+    """
+    w_min = weights.min(dim=0)[0]
+    w_max = weights.max(dim=0)[0]
+    return (weights - w_min) / (w_max - w_min + 1e-8)
+
+
 def to_one_hot_var(tensor, nClasses, requires_grad=False):
     """Convert a tensor to one-hot encoding.
     Args:
@@ -71,22 +82,63 @@ class mIoULoss(nn.Module):
 class CustomBCELoss(nn.Module):
     def __init__(self, args):
         super(CustomBCELoss, self).__init__()
-        self.bce_loss = nn.BCELoss(reduction="none")
+        self.bce_fn = nn.BCELoss(reduction="none")
         self.alpha = args.edge_weight
 
-    def forward(self, inputs, targets, weights):
-        loss = self.bce_loss(inputs, targets)
-        loss += loss * (self.alpha * weights + targets)
-        return loss.mean()
+    def forward(
+        self, inputs: torch.tensor, targets: torch.tensor, weights: torch.tensor
+    ) -> torch.tensor:
+        """Compute weighted binary cross entropy loss.
+
+        Args:
+            inputs (torch.tensor): Predicted probabilities with shape (N, H, W).
+            targets (torch.tensor): Ground truth with shape (N, H, W).
+            weights (torch.tensor): Edge weights with shape (N, H, W).
+
+        Returns:
+            torch.tensor: Weighted binary cross entropy loss.
+        """
+        loss = self.bce_fn(inputs, targets)
+        weight = normalize_weights(weights)
+        w = (1 - self.alpha) + self.alpha * weight
+        return torch.mean(w * loss)
+
+
+class CustomMSELoss(nn.Module):
+    def __init__(self, args) -> None:
+        super(CustomMSELoss, self).__init__()
+        self.mse_fn = nn.MSELoss(reduction="none")
+        self.alpha = args.edge_weight
+
+    def forward(
+        self, inputs: torch.tensor, targets: torch.tensor, weights: torch.tensor
+    ) -> torch.tensor:
+        """Compute weighted mean squared error loss.
+
+        Args:
+            inputs (torch.tensor): Predicted probabilities with shape (N, H, W).
+            targets (torch.tensor): Ground truth with shape (N, H, W).
+            weights (torch.tensor): Edge weights with shape (N, H, W).
+
+        Returns:
+            torch.tensor: Weighted mean squared error loss.
+        """
+        loss = self.mse_fn(inputs, targets)
+        weight = normalize_weights(weights)
+        w = (1 - self.alpha) + self.alpha * weight
+        return torch.mean(w * loss)
 
 
 class Criterion(nn.Module):
     def __init__(self, args):
         super(Criterion, self).__init__()
-        self.bce_loss = CustomBCELoss(args)
-        self.mIoU_loss = mIoULoss()
+        self.bce_fn = CustomBCELoss(args)
+        self.mse_fn = CustomMSELoss(args)
+        self.mIoU_fn = mIoULoss()
 
     def forward(self, inputs, targets, weights):
-        mio_loss = self.mIoU_loss(inputs, targets)
-        bce_loss = self.bce_loss(inputs, targets, weights)
-        return mio_loss + bce_loss
+        mio_loss = self.mIoU_fn(inputs, targets)
+        bce_loss = self.bce_fn(inputs, targets, weights)
+        mse_loss = self.mse_fn(inputs, targets, weights)
+
+        return bce_loss + mio_loss + mse_loss

@@ -53,18 +53,3 @@ def calculate_channel_mean_std(image_paths: List[str]) -> Tuple[torch.Tensor, to
     logging.info(f"Std: {std}")
 
     return mean, std
-
-
-def denormalize_img(img: torch.Tensor, mean: np.ndarray, std: np.ndarray) -> np.ndarray:
-    """Denormalize the image.
-
-    Args:
-        img (torch.Tensor): Image to denormalize.
-        mean (torch.Tensor): Mean of the dataset.
-        std (torch.Tensor): Standard deviation of the dataset.
-
-    Returns:
-        np.ndarray: Denormalized image.
-    """
-    img = img.permute(1, 2, 0).numpy()
-    return ((img * std[None, None, :]) + mean[None, None, :]) * 255

@@ -1,14 +1,18 @@
 import argparse
+import json
 import logging
 import os
+from typing import List
 
 import numpy as np
 import torch
 import torchvision
+from torch import nn
 
-from src.datasets.data_utils import calculate_channel_mean_std, get_dataloader
+from src.datasets.data_utils import get_dataloader
 from src.utils.enums import DatasetEnum
 from src.utils.io import list_dir, load_image, load_mask, load_weight
+from src.utils.visualizations import plot_predictions
 
 
 class BaseDataset(torch.utils.data.Dataset):
@@ -19,8 +23,6 @@ class BaseDataset(torch.utils.data.Dataset):
         img_paths: str,
         mask_paths: str,
         weight_paths: str,
-        mean: torch.Tensor,
-        std: torch.Tensor,
         args: argparse.Namespace,
         split: str = "train",
     ):
@@ -43,14 +45,9 @@ class BaseDataset(torch.utils.data.Dataset):
         self.masks = mask_paths
         self.weights = weight_paths
 
-        self.img_mean = mean
-        self.img_std = std
-        self.img_norm = torchvision.transforms.Normalize(mean=mean, std=std)
+        self.metadata = json.load(open(self.args.metadata, "r"))
 
         self.transforms = []
-        # if self.split == "train":
-        #     self.transforms.append(torchvision.transforms.RandomHorizontalFlip(0.5))
-        #     self.transforms.append(torchvision.transforms.RandomVerticalFlip(0.5))
 
     def __len__(self):
         """Return the length of the dataset."""
@@ -67,7 +64,7 @@ class BaseDataset(torch.utils.data.Dataset):
         weight = torch.from_numpy(weight).float()
 
         image = image.permute(2, 0, 1)
-        image = self.img_norm(image)
+        image = self.normalize_image(image, self.images[index])
 
         for transform in self.transforms:
             image = transform(image)
@@ -79,8 +76,67 @@ class BaseDataset(torch.utils.data.Dataset):
 
         return image, mask, weight
 
+    def normalize_image(self, image: torch.tensor, img_path: str) -> torch.tensor:
+        """Normalize the image.
 
-def get_splits(dataset: str, args: argparse.Namespace):
+        Args:
+            image (torch.tensor): Image to normalize.
+            img_path (str): Path to the image.
+
+        Returns:
+            torch.tensor: Normalized image.
+        """
+        dataset = img_path.split("_")[-1].split(".")[0]
+        mean = self.metadata[dataset]["img_mean"]
+        std = self.metadata[dataset]["img_std"]
+        return torchvision.transforms.Normalize(mean=mean, std=std)(image)
+
+    def denormalize_image(self, image: torch.tensor, img_path: str) -> torch.tensor:
+        """Denormalize the image.
+
+        Args:
+            image (torch.tensor): Image to denormalize.
+            img_path (str): Path to the image.
+
+        Returns:
+            torch.tensor: Denormalized image.
+        """
+        dataset = img_path.split("_")[-1].split(".")[0]
+        mean = self.metadata[dataset]["img_mean"]
+        std = self.metadata[dataset]["img_std"]
+
+        mean = torch.tensor(mean).view(3, 1, 1)
+        std = torch.tensor(std).view(3, 1, 1)
+
+        return ((image * std) + mean).permute(1, 2, 0)
+
+    def plot_predictions(self, model: nn.Module, n_samples: int = 5, filename: str = None) -> None:
+        model.eval()
+
+        batch = [self[i] for i in range(n_samples)]
+        images, masks, weights = zip(*batch)
+
+        images = torch.stack(images)
+        masks = torch.stack(masks)
+        weights = torch.stack(weights)
+
+        with torch.no_grad():
+            predictions = model(images.to(self.args.device))
+
+        images = torch.stack(
+            [self.denormalize_image(image, self.images[i]) for i, image in enumerate(images)]
+        )
+
+        plot_predictions(
+            images=images,
+            masks=masks,
+            predictions=predictions,
+            weights=weights,
+            filename=filename,
+        )
+
+
+def get_splits(datasets: List[str], args: argparse.Namespace):
     """Return the splits of the dataset.
 
     Args:
@@ -94,10 +150,10 @@ def get_splits(dataset: str, args: argparse.Namespace):
     masks = list_dir(os.path.join(args.data_path, "masks"))
     weights = list_dir(os.path.join(args.data_path, "weights"))
 
-    if dataset != DatasetEnum.ALL.value:
-        images = [image for image in images if dataset in image]
-        masks = [mask for mask in masks if dataset in mask]
-        weights = [weight for weight in weights if dataset in weight]
+    if DatasetEnum.ALL.value not in datasets:
+        images = [image for image in images if any(dataset in image for dataset in datasets)]
+        masks = [mask for mask in masks if any(dataset in mask for dataset in datasets)]
+        weights = [weight for weight in weights if any(dataset in weight for dataset in datasets)]
 
     images = sorted(images)
     masks = sorted(masks)
@@ -117,14 +173,13 @@ def get_splits(dataset: str, args: argparse.Namespace):
     val_masks = masks[int(0.8 * len(masks)) :]
     val_weights = weights[int(0.8 * len(weights)) :]
 
-    train_mean, train_std = calculate_channel_mean_std(train_images)
+    logging.info(f"Train images: {len(train_images)}")
+    logging.info(f"Valid images: {len(val_images)}")
 
     train_dataset = BaseDataset(
         img_paths=train_images,
         mask_paths=train_masks,
         weight_paths=train_weights,
-        mean=train_mean,
-        std=train_std,
         args=args,
         split="train",
     )
@@ -132,8 +187,6 @@ def get_splits(dataset: str, args: argparse.Namespace):
         img_paths=val_images,
         mask_paths=val_masks,
         weight_paths=val_weights,
-        mean=train_mean,
-        std=train_std,
         args=args,
         split="val",
     )

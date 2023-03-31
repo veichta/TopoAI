@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
+from src.losses import Criterion
+
 PATCH_SIZE = 16  # pixels per side of square patches
 VAL_SIZE = 10  # size of the validation set (number of images)
 CUTOFF = 0.25  # minimum average brightness for a mask patch to be classified as containing road
@@ -53,15 +55,14 @@ def iou_fn(inputs: torch.tensor, target: torch.tensor) -> torch.tensor:
     Returns:
         torch.tensor: The IoU computed as the intersection over the union of the inputs and targets.
     """
-    inputs = inputs.sigmoid()
     inputs = (inputs > 0.5).float()
     intersection = (inputs * target).sum()
-    union = inputs.sum() + target.sum()
+    union = inputs.sum() + target.sum() - intersection
     return (intersection + 1e-8) / (union - intersection + 1e-8)
 
 
 class Metrics:
-    def __init__(self, loss_fn):
+    def __init__(self, loss_fn: Criterion):
         self.loss_fn = loss_fn
         self.iou_fn = iou_fn
         self.acc_fn = accuracy_fn
@@ -69,6 +70,7 @@ class Metrics:
         self.train_loss = []
         self.train_bce = []
         self.train_miou = []
+        self.train_mse = []
 
         self.train_iou = []
         self.train_acc = []
@@ -76,6 +78,7 @@ class Metrics:
         self.val_loss = []
         self.val_bce = []
         self.val_miou = []
+        self.val_mse = []
 
         self.val_iou = []
         self.val_acc = []
@@ -85,6 +88,8 @@ class Metrics:
         self.epoch_loss = []
         self.epoch_bce = []
         self.epoch_miou = []
+        self.epoch_mse = []
+
         self.epoch_iou = []
         self.epoch_acc = []
 
@@ -98,8 +103,9 @@ class Metrics:
         """
         loss = self.loss_fn(pred, target, weight)
 
-        bce = self.loss_fn.bce_loss(pred, target, weight)
-        miou = self.loss_fn.mIoU_loss(pred, target, weight)
+        bce = self.loss_fn.bce_fn(pred, target, weight)
+        miou = self.loss_fn.mIoU_fn(pred, target, weight)
+        mse = self.loss_fn.mse_fn(pred, target, weight)
 
         iou = self.iou_fn(pred, target)
         acc = self.acc_fn(pred, target)
@@ -107,6 +113,7 @@ class Metrics:
         self.epoch_loss.append(loss.item())
         self.epoch_bce.append(bce.item())
         self.epoch_miou.append(miou.item())
+        self.epoch_mse.append(mse.item())
 
         self.epoch_iou.append(iou.item())
         self.epoch_acc.append(acc.item())
@@ -122,16 +129,20 @@ class Metrics:
             self.train_loss.append(np.mean(self.epoch_loss))
             self.train_bce.append(np.mean(self.epoch_bce))
             self.train_miou.append(np.mean(self.epoch_miou))
+            self.train_mse.append(np.mean(self.epoch_mse))
 
             self.train_iou.append(np.mean(self.epoch_iou))
             self.train_acc.append(np.mean(self.epoch_acc))
+
         elif mode == "eval":
             self.val_loss.append(np.mean(self.epoch_loss))
             self.val_bce.append(np.mean(self.epoch_bce))
             self.val_miou.append(np.mean(self.epoch_miou))
+            self.val_mse.append(np.mean(self.epoch_mse))
 
             self.val_iou.append(np.mean(self.epoch_iou))
             self.val_acc.append(np.mean(self.epoch_acc))
+
         else:
             raise ValueError(f"Unknown mode {mode}")
 
@@ -153,19 +164,21 @@ class Metrics:
         logging.info("-" * 30)
         logging.info(f"Epoch {epoch+1} ({mode}):")
         if mode == "train":
-            logging.info(f"\tloss: {self.train_loss[epoch]}")
-            logging.info(f"\tbce: {self.train_bce[epoch]}")
-            logging.info(f"\tmiou: {self.train_miou[epoch]}")
+            logging.info(f"\tloss: {self.train_loss[epoch]:.4f}")
+            logging.info(f"\tbce:  {self.train_bce[epoch]:.4f}")
+            logging.info(f"\tmiou: {self.train_miou[epoch]:.4f}")
+            logging.info(f"\tmse:  {self.train_mse[epoch]:.4f}")
 
-            logging.info(f"\tiou: {self.train_iou[epoch]}")
-            logging.info(f"\tacc: {self.train_acc[epoch]}")
+            logging.info(f"\tiou:  {self.train_iou[epoch]:.4f}")
+            logging.info(f"\tacc:  {self.train_acc[epoch]:.4f}")
         elif mode == "eval":
-            logging.info(f"\tloss: {self.val_loss[epoch]}")
-            logging.info(f"\tbce: {self.val_bce[epoch]}")
-            logging.info(f"\tmiou: {self.val_miou[epoch]}")
+            logging.info(f"\tloss: {self.val_loss[epoch]:.4f}")
+            logging.info(f"\tbce:  {self.val_bce[epoch]:.4f}")
+            logging.info(f"\tmiou: {self.val_miou[epoch]:.4f}")
+            logging.info(f"\tmse:  {self.val_mse[epoch]:.4f}")
 
-            logging.info(f"\tiou: {self.val_iou[epoch]}")
-            logging.info(f"\tacc: {self.val_acc[epoch]}")
+            logging.info(f"\tiou:  {self.val_iou[epoch]:.4f}")
+            logging.info(f"\tacc:  {self.val_acc[epoch]:.4f}")
 
         logging.info("-" * 30)
 
@@ -192,19 +205,25 @@ class Metrics:
         ax[0, 2].set_xlabel("Epoch")
         ax[0, 2].set_ylabel("BCE")
 
-        ax[1, 0].plot(self.train_acc, label="train")
-        ax[1, 0].plot(self.val_acc, label="val")
-        ax[1, 0].set_title("Accuracy")
-        ax[1, 0].legend()
+        ax[1, 0].plot(self.train_mse, label="train")
+        ax[1, 0].plot(self.val_mse, label="val")
+        ax[1, 0].set_title("MSE")
         ax[1, 0].set_xlabel("Epoch")
-        ax[1, 0].set_ylabel("Accuracy")
+        ax[1, 0].set_ylabel("MSE")
 
-        ax[1, 1].plot(self.train_iou, label="train")
-        ax[1, 1].plot(self.val_iou, label="val")
-        ax[1, 1].set_title("IoU")
+        ax[1, 1].plot(self.train_acc, label="train")
+        ax[1, 1].plot(self.val_acc, label="val")
+        ax[1, 1].set_title("Accuracy")
         ax[1, 1].legend()
         ax[1, 1].set_xlabel("Epoch")
-        ax[1, 1].set_ylabel("IoU")
+        ax[1, 1].set_ylabel("Accuracy")
+
+        ax[1, 2].plot(self.train_iou, label="train")
+        ax[1, 2].plot(self.val_iou, label="val")
+        ax[1, 2].set_title("IoU")
+        ax[1, 2].legend()
+        ax[1, 2].set_xlabel("Epoch")
+        ax[1, 2].set_ylabel("IoU")
 
         if filename is not None:
             plt.savefig(filename)

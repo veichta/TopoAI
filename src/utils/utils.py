@@ -33,11 +33,19 @@ def get_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
-        "--dataset",
+        "--datasets",
         type=str,
+        nargs="+",
         choices=[e.value for e in DatasetEnum],
-        default="cil",
+        default=[DatasetEnum.CIL.value],
         help="Dataset to use",
+    )
+
+    parser.add_argument(
+        "--metadata",
+        type=str,
+        default="metadata.json",
+        help="Path to metadata.json.",
     )
 
     parser.add_argument(

@@ -56,4 +56,4 @@ class BaseUNet(nn.Module):
             x = upconv(x)  # increase resolution
             x = torch.cat([x, feature], dim=1)  # concatenate skip features
             x = block(x)  # pass through the block
-        return self.head(x).squeeze(1)  # reduce to 1 channel
+        return self.head(x).squeeze(1).sigmoid()  # reduce to 1 channel
