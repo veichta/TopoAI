@@ -1,5 +1,9 @@
 import argparse
+import datetime
+import json
 import logging
+import os
+import time
 
 import numpy as np
 import torch
@@ -94,9 +98,21 @@ def get_args() -> argparse.Namespace:
     # LOGGING
     parser.add_argument(
         "--wandb",
-        type=bool,
-        default=False,
+        action="store_true",
         help="Use wandb for logging",
+    )
+
+    parser.add_argument(
+        "--log_dir",
+        type=str,
+        default="logs",
+        help="Log directory",
+    )
+
+    parser.add_argument(
+        "--log_to_file",
+        action="store_true",
+        help="Log to file",
     )
     return parser.parse_args()
 
@@ -114,15 +130,25 @@ def setup(args: argparse.Namespace):
             config=vars(get_args()),
         )
 
+    # log dir
+    timestamp = datetime.datetime.fromtimestamp(time.time()).strftime("%Y-%m-%d_%H-%M-%S")
+    args.log_dir = f"{args.log_dir}/{timestamp}"
+    os.makedirs(args.log_dir, exist_ok=True)
+
     # setup logging
     logging.basicConfig(
         level=logging.INFO,
         format="[%(asctime)s - %(levelname)s] %(message)s",
+        filename=os.path.join(args.log_dir, "log.txt") if args.log_to_file else None,
     )
 
     logging.info("Arguments:")
     for k, v in vars(args).items():
         logging.info(f"\t{k}: {v}")
+
+    # save args
+    with open(os.path.join(args.log_dir, "config.json"), "w") as f:
+        json.dump(vars(args), f, indent=4)
 
 
 def cleanup(args: argparse.Namespace):

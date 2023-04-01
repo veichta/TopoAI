@@ -1,3 +1,4 @@
+import json
 import logging
 
 import matplotlib.pyplot as plt
@@ -181,6 +182,30 @@ class Metrics:
             logging.info(f"\tacc:  {self.val_acc[epoch]:.4f}")
 
         logging.info("-" * 30)
+
+    def save_metrics(self, filename: str):
+        """Saves the metrics to a file.
+
+        Args:
+            filename (str): The name of the file.
+        """
+        metrics = {
+            "train_loss": self.train_loss,
+            "train_bce": self.train_bce,
+            "train_miou": self.train_miou,
+            "train_mse": self.train_mse,
+            "train_iou": self.train_iou,
+            "train_acc": self.train_acc,
+            "val_loss": self.val_loss,
+            "val_bce": self.val_bce,
+            "val_miou": self.val_miou,
+            "val_mse": self.val_mse,
+            "val_iou": self.val_iou,
+            "val_acc": self.val_acc,
+        }
+
+        with open(filename, "w") as f:
+            json.dump(metrics, f, indent=4)
 
     def plot_metrics(self, filename: str = None):
         fig, ax = plt.subplots(2, 3, figsize=(20, 10))

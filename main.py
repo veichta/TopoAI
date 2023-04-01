@@ -1,4 +1,5 @@
 import logging
+import os
 
 import numpy as np
 import torch
@@ -15,8 +16,6 @@ def main():
     """Main function."""
     args = get_args()
     setup(args)
-
-    # TODO: Add your code here
 
     model = BaseUNet()
     model.to(args.device)
@@ -37,12 +36,23 @@ def main():
         eval(args, model, val_dl, epoch, metrics)
         scheduler.step(metrics.val_loss[-1])
 
-        val_dl.dataset.plot_predictions(model, filename="plots/eval.png")
-        metrics.plot_metrics("plots/metrics.png")
+        # log metrics
+        val_dl.dataset.plot_predictions(model, filename=os.path.join(args.log_dir, "eval.png"))
+        metrics.plot_metrics(os.path.join(args.log_dir, "metrics.png"))
+        metrics.save_metrics(os.path.join(args.log_dir, "metrics.json"))
+
+        # save best model
+        if metrics.val_loss[-1] == np.min(metrics.val_loss):
+            torch.save(model.state_dict(), os.path.join(args.log_dir, "best_model.pt"))
 
     best_epoch = np.argmax(metrics.val_acc)
     logging.info(f"Best epoch: {best_epoch + 1}")
     metrics.print_metrics(best_epoch, "eval")
+
+    # load best model
+    model.load_state_dict(torch.load(os.path.join(args.log_dir, "best_model.pt")))
+    train_dl.dataset.plot_predictions(model, filename=os.path.join(args.log_dir, "best_train.png"))
+    val_dl.dataset.plot_predictions(model, filename=os.path.join(args.log_dir, "best_eval.png"))
 
     cleanup(args)
 
