@@ -35,7 +35,8 @@ def main():
         if not args.model_path:
             raise ValueError("Please specify a model path to evaluate.")
 
-        model.load_state_dict(torch.load(args.model_path))
+        model.load_state_dict(torch.load(args.model_path, map_location=torch.device(args.device)))
+        model.to(args.device)
         eval(args, model, val_dl, 0, metrics)
 
         val_dl.dataset.plot_predictions(model, filename=os.path.join(args.log_dir, "eval.png"))
