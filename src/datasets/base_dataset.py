@@ -149,42 +149,50 @@ def get_splits(datasets: List[str], args: argparse.Namespace):
         Tuple[torch.utils.data.Dataset, torch.utils.data.Dataset]: Train and validation datasets.
     """
 
-    images = list_dir(os.path.join(args.data_path, "images"))
-    masks = list_dir(os.path.join(args.data_path, "masks"))
-    weights = list_dir(os.path.join(args.data_path, "weights"))
+    # images = list_dir(os.path.join(args.data_path, "images"))
+    # masks = list_dir(os.path.join(args.data_path, "masks"))
+    # weights = list_dir(os.path.join(args.data_path, "weights"))
+
+    train_images = list_dir(os.path.join(args.data_path, "training", "images"))
+    train_masks = list_dir(os.path.join(args.data_path, "training", "masks"))
+    train_weights = list_dir(os.path.join(args.data_path, "training", "weights"))
+
+    val_images = list_dir(os.path.join(args.data_path, "validation", "images"))
+    val_masks = list_dir(os.path.join(args.data_path, "validation", "masks"))
+    val_weights = list_dir(os.path.join(args.data_path, "validation", "weights"))
 
     if DatasetEnum.ALL.value not in datasets:
-        images = [
+        train_images = [
             image
-            for image in images
+            for image in train_images
             if any(dataset in image.split("/")[-1] for dataset in datasets)
         ]
-        masks = [
-            mask for mask in masks if any(dataset in mask.split("/")[-1] for dataset in datasets)
+        train_masks = [
+            mask
+            for mask in train_masks
+            if any(dataset in mask.split("/")[-1] for dataset in datasets)
         ]
-        weights = [
+        train_weights = [
             weight
-            for weight in weights
+            for weight in train_weights
             if any(dataset in weight.split("/")[-1] for dataset in datasets)
         ]
 
-    images = sorted(images)
-    masks = sorted(masks)
-    weights = sorted(weights)
-
-    order = np.random.permutation(len(images))
-
-    images = np.array(images)[order]
-    masks = np.array(masks)[order]
-    weights = np.array(weights)[order]
-
-    train_images = images[: int(0.8 * len(images))]
-    train_masks = masks[: int(0.8 * len(masks))]
-    train_weights = weights[: int(0.8 * len(weights))]
-
-    val_images = images[int(0.8 * len(images)) :]
-    val_masks = masks[int(0.8 * len(masks)) :]
-    val_weights = weights[int(0.8 * len(weights)) :]
+        val_images = [
+            image
+            for image in val_images
+            if any(dataset in image.split("/")[-1] for dataset in datasets)
+        ]
+        val_masks = [
+            mask
+            for mask in val_masks
+            if any(dataset in mask.split("/")[-1] for dataset in datasets)
+        ]
+        val_weights = [
+            weight
+            for weight in val_weights
+            if any(dataset in weight.split("/")[-1] for dataset in datasets)
+        ]
 
     logging.info(f"Train images: {len(train_images)}")
     logging.info(f"Valid images: {len(val_images)}")

@@ -13,10 +13,13 @@ from src.utils.enums import DatasetEnum
 
 def main():
     # Create train and validation directories
-    if not os.path.exists(os.path.join(args.dataset, "training")):
-        os.makedirs(os.path.join(args.dataset, "training"))
-    if not os.path.exists(os.path.join(args.dataset, "validation")):
-        os.makedirs(os.path.join(args.dataset, "validation"))
+    os.makedirs(os.path.join(args.dataset, "training", "images"), exist_ok=True)
+    os.makedirs(os.path.join(args.dataset, "training", "masks"), exist_ok=True)
+    os.makedirs(os.path.join(args.dataset, "training", "weights"), exist_ok=True)
+
+    os.makedirs(os.path.join(args.dataset, "validation", "images"), exist_ok=True)
+    os.makedirs(os.path.join(args.dataset, "validation", "masks"), exist_ok=True)
+    os.makedirs(os.path.join(args.dataset, "validation", "weights"), exist_ok=True)
 
     # get all file names
     image_names = os.listdir(os.path.join(args.dataset, "images"))
@@ -48,12 +51,12 @@ def main():
             if idx in idx_train:
                 shutil.copy(
                     os.path.join(args.dataset, "images", image_name),
-                    os.path.join(args.dataset, "training", image_name),
+                    os.path.join(args.dataset, "training", "images", image_name),
                 )
             else:
                 shutil.copy(
                     os.path.join(args.dataset, "images", image_name),
-                    os.path.join(args.dataset, "validation", image_name),
+                    os.path.join(args.dataset, "validation", "images", image_name),
                 )
 
         # copy masks to train and validation directories
@@ -62,12 +65,12 @@ def main():
             if idx in idx_train:
                 shutil.copy(
                     os.path.join(args.dataset, "masks", mask_name),
-                    os.path.join(args.dataset, "training", mask_name),
+                    os.path.join(args.dataset, "training", "masks", mask_name),
                 )
             else:
                 shutil.copy(
                     os.path.join(args.dataset, "masks", mask_name),
-                    os.path.join(args.dataset, "validation", mask_name),
+                    os.path.join(args.dataset, "validation", "masks", mask_name),
                 )
 
         # copy weights to train and validation directories
@@ -78,18 +81,18 @@ def main():
             if idx in idx_train:
                 shutil.copy(
                     os.path.join(args.dataset, "weights", weight_name),
-                    os.path.join(args.dataset, "training", weight_name),
+                    os.path.join(args.dataset, "training", "weights", weight_name),
                 )
             else:
                 shutil.copy(
                     os.path.join(args.dataset, "weights", weight_name),
-                    os.path.join(args.dataset, "validation", weight_name),
+                    os.path.join(args.dataset, "validation", "weights", weight_name),
                 )
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", type=str, default="dataset", help="path to dataset")
+    parser.add_argument("--dataset", type=str, required=True, help="path to dataset")
     parser.add_argument("--train_split", type=float, default=0.8, help="percentage of train split")
     args = parser.parse_args()
 
