@@ -28,6 +28,18 @@ def get_args() -> argparse.Namespace:
         help="Device to use",
     )
 
+    parser.add_argument(
+        "--eval",
+        action="store_true",
+        help="Evaluate model",
+    )
+
+    parser.add_argument(
+        "--model_path",
+        type=str,
+        help="Path to model",
+    )
+
     # DATA
     parser.add_argument(
         "--data_path",
@@ -63,7 +75,7 @@ def get_args() -> argparse.Namespace:
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=32,
+        default=8,
         help="Batch size",
     )
 

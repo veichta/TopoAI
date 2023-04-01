@@ -4,12 +4,13 @@ import logging
 import os
 from typing import List
 
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torchvision
 from torch import nn
 
-from src.datasets.data_utils import get_dataloader
+from src.datasets.data_utils import get_augmentation, get_dataloader
 from src.utils.enums import DatasetEnum
 from src.utils.io import list_dir, load_image, load_mask, load_weight
 from src.utils.visualizations import plot_predictions
@@ -47,7 +48,7 @@ class BaseDataset(torch.utils.data.Dataset):
 
         self.metadata = json.load(open(self.args.metadata, "r"))
 
-        self.transforms = []
+        self.transforms = get_augmentation(resolution=400)
 
     def __len__(self):
         """Return the length of the dataset."""
@@ -59,16 +60,18 @@ class BaseDataset(torch.utils.data.Dataset):
         mask = load_mask(self.masks[index])
         weight = load_weight(self.weights[index])
 
+        if self.split == "train":
+            augmented = self.transforms(image=image, masks=[mask, weight])
+            image = augmented["image"]
+            mask = augmented["masks"][0]
+            weight = augmented["masks"][1]
+
         image = torch.from_numpy(image).float()
         mask = torch.from_numpy(mask).float()
         weight = torch.from_numpy(weight).float()
 
         image = image.permute(2, 0, 1)
         image = self.normalize_image(image, self.images[index])
-
-        for transform in self.transforms:
-            image = transform(image)
-            mask = transform(mask)
 
         logging.debug(f"Image shape: {image.shape}")
         logging.debug(f"Mask shape: {mask.shape}")

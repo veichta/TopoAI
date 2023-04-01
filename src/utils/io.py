@@ -13,7 +13,7 @@ def load_image(path: str) -> np.ndarray:
     Returns:
         np.ndarray: Image as numpy array.
     """
-    return np.array(Image.open(path)) / 255.0
+    return np.array(Image.open(path), dtype=np.float32) / 255.0
 
 
 def load_mask(path: str) -> np.ndarray:
@@ -33,7 +33,7 @@ def load_mask(path: str) -> np.ndarray:
     if len(mask.shape) == 3:
         mask = mask[:, :, 0]
 
-    return mask
+    return np.array(mask, dtype=np.uint8)
 
 
 def load_weight(path: str) -> np.ndarray:
@@ -45,7 +45,7 @@ def load_weight(path: str) -> np.ndarray:
     Returns:
         np.ndarray: Weight as numpy array.
     """
-    return np.array(Image.open(path))
+    return np.array(Image.open(path), dtype=np.uint8)
 
 
 def save_image(img: np.ndarray, path: str) -> None:

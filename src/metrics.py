@@ -156,7 +156,9 @@ class Metrics:
             epoch (int): The current epoch.
             mode (str): The current mode, either "train" or "eval".
         """
-        if epoch > len(self.train_loss) - 1:
+        if epoch > len(self.train_loss) - 1 and mode == "train":
+            raise ValueError(f"Epoch {epoch} is out of range")
+        elif epoch > len(self.val_loss) - 1 and mode == "eval":
             raise ValueError(f"Epoch {epoch} is out of range")
 
         if mode not in ["train", "eval"]:

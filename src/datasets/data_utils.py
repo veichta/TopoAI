@@ -2,11 +2,66 @@ import argparse
 import logging
 from typing import List, Tuple
 
+import albumentations as A
 import numpy as np
 import torch
 from tqdm import tqdm
 
 from src.utils.io import load_image
+
+
+def get_augmentation(resolution: int = 400) -> A.Compose:
+    """Get augmentation.
+
+    Args:
+        resolution (int): Image resolution.
+
+    Returns:
+        A.Compose: The augmentations.
+    """
+    transform = A.Compose(
+        [
+            A.PadIfNeeded(min_height=resolution, min_width=resolution, p=1.0),
+            A.Resize(height=resolution, width=resolution),
+        ]
+    )
+
+    return A.Compose(
+        [
+            transform,
+            A.OneOf(
+                [
+                    A.RandomRotate90(p=1),
+                    A.RandomResizedCrop(
+                        resolution, resolution, p=1, scale=(0.5, 1.2), ratio=(0.85, 1.15)
+                    ),
+                    A.GridDistortion(p=1, distort_limit=0.5),
+                    A.ElasticTransform(p=1, alpha=120, sigma=750 * 0.05, alpha_affine=120 * 0.03),
+                    A.RandomShadow(
+                        p=1, num_shadows_lower=1, num_shadows_upper=5, shadow_dimension=3
+                    ),
+                    A.CoarseDropout(
+                        max_holes=8,
+                        max_height=50,
+                        max_width=50,
+                        min_holes=5,
+                        min_height=10,
+                        min_width=10,
+                        fill_value=0,
+                        p=1,
+                    ),
+                    A.HorizontalFlip(p=1),
+                    A.VerticalFlip(p=1),
+                    A.Transpose(p=1),
+                    A.RGBShift(r_shift_limit=25, g_shift_limit=25, b_shift_limit=25, p=1),
+                    A.RandomBrightnessContrast(brightness_limit=0.3, contrast_limit=0.3, p=1),
+                    A.RandomGamma(p=1, gamma_limit=(50, 500)),
+                    A.ColorJitter(p=1),
+                ],
+                0.8,
+            ),
+        ]
+    )
 
 
 def get_dataloader(

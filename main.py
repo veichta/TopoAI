@@ -31,6 +31,17 @@ def main():
     criterion = Criterion(args)
     metrics = Metrics(criterion)
 
+    if args.eval:
+        if not args.model_path:
+            raise ValueError("Please specify a model path to evaluate.")
+
+        model.load_state_dict(torch.load(args.model_path))
+        eval(args, model, val_dl, 0, metrics)
+
+        val_dl.dataset.plot_predictions(model, filename=os.path.join(args.log_dir, "eval.png"))
+        metrics.save_metrics(os.path.join(args.log_dir, "metrics.json"))
+        return
+
     for epoch in range(args.epochs):
         train_one_epoch(args, model, train_dl, optimizer, criterion, epoch, metrics)
         eval(args, model, val_dl, epoch, metrics)
