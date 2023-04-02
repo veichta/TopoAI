@@ -9,7 +9,7 @@ import numpy as np
 import torch
 
 import wandb
-from src.utils.enums import DatasetEnum
+from src.utils.enums import DatasetEnum, ModelsEnum
 
 
 def get_args() -> argparse.Namespace:
@@ -32,6 +32,12 @@ def get_args() -> argparse.Namespace:
         "--eval",
         action="store_true",
         help="Evaluate model",
+    )
+
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume training",
     )
 
     parser.add_argument(
@@ -69,6 +75,15 @@ def get_args() -> argparse.Namespace:
         type=int,
         default=1,
         help="Number of workers for dataloader",
+    )
+
+    # MODEL
+    parser.add_argument(
+        "--model",
+        type=str,
+        choices=[e.value for e in ModelsEnum],
+        default=ModelsEnum.UNET.value,
+        help="Model to use",
     )
 
     # TRAINING

@@ -1,5 +1,12 @@
+import argparse
+import logging
+
+import numpy as np
 import torch
 import torch.nn as nn
+from tqdm import tqdm
+
+from src.metrics import Metrics
 
 
 class Block(nn.Module):
@@ -57,3 +64,119 @@ class BaseUNet(nn.Module):
             x = torch.cat([x, feature], dim=1)  # concatenate skip features
             x = block(x)  # pass through the block
         return self.head(x).squeeze(1).sigmoid()  # reduce to 1 channel
+
+
+def load_model(model: nn.Module, args: argparse.Namespace) -> nn.Module:
+    """Load model from checkpoint.
+
+    Args:
+        model (nn.Module): Model to load.
+        args (argparse.Namespace): _description_
+
+    Raises:
+        ValueError: If no model path is specified.
+
+    Returns:
+        nn.Module: Loaded model.
+    """
+    if args.resume or args.eval:
+        if not args.model_path:
+            raise ValueError("Please specify a model path to resume from.")
+
+        logging.info(f"Loading model checkpoint from {args.model_path}")
+
+        model.load_state_dict(torch.load(args.model_path, map_location=torch.device(args.device)))
+        model.to(args.device)
+
+    return model
+
+
+def eval(
+    model: BaseUNet,
+    val_dl: torch.utils.data.DataLoader,
+    metrics: Metrics,
+    epoch: int,
+    args: argparse.Namespace,
+):
+    """Evaluate the model on the validation set.
+
+    Args:
+        model (nn.Module): BaseUNet model.
+        val_dl (torch.utils.data.DataLoader): Validation data loader.
+        metrics (Metrics): Metrics object.
+        epoch (int): Current epoch.
+        args (argparse.Namespace): Arguments.
+    """
+    logging.info(f"Eval epoch {epoch + 1}/{args.epochs}")
+    pbar = tqdm(val_dl, bar_format="{l_bar}{bar:20}{r_bar}{bar:-20b}")
+    pbar.set_description(f"Epoch {epoch + 1}/{args.epochs}")
+    model.eval()
+    metrics.start_epoch()
+    with torch.no_grad():
+        for img, mask, weight in val_dl:
+            img = img.to(args.device)
+            mask = mask.to(args.device)
+            weight = weight.to(args.device)
+
+            out = model(img)
+            metrics.update(out, mask, weight)
+
+            pbar.set_postfix(
+                loss=np.mean(metrics.epoch_loss),
+                iou=np.mean(metrics.epoch_iou),
+                acc=np.mean(metrics.epoch_acc),
+            )
+            pbar.update()
+
+    pbar.close()
+    metrics.end_epoch(epoch=epoch, mode="eval")
+
+
+def train_one_epoch(
+    model: BaseUNet,
+    train_dl: torch.utils.data.DataLoader,
+    optimizer: torch.optim.Optimizer,
+    criterion: nn.Module,
+    metrics: Metrics,
+    epoch: int,
+    args: argparse.Namespace,
+):
+    """Train the model for one epoch.
+
+    Args:
+        model (BaseUNet): BaseUNet model.
+        train_dl (torch.utils.data.DataLoader): Training data loader.
+        optimizer (torch.optim.Optimizer): Optimizer.
+        criterion (nn.Module): Loss function.
+        metrics (Metrics): Metrics object.
+        epoch (int): Current epoch.
+        args (argparse.Namespace): Arguments.
+    """
+    logging.info(f"Epoch {epoch + 1}/{args.epochs}")
+    pbar = tqdm(train_dl, bar_format="{l_bar}{bar:20}{r_bar}{bar:-20b}")
+    pbar.set_description(f"Epoch {epoch + 1}/{args.epochs}")
+    model.train()
+    metrics.start_epoch()
+    for img, mask, weight in train_dl:
+        img = img.to(args.device)
+        mask = mask.to(args.device)
+        weight = weight.to(args.device)
+
+        out = model(img)
+        loss = criterion(out, mask, weight)
+
+        metrics.update(out, mask, weight)
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        pbar.set_postfix(
+            loss=np.mean(metrics.epoch_loss),
+            iou=np.mean(metrics.epoch_iou),
+            acc=np.mean(metrics.epoch_acc),
+        )
+        pbar.update()
+
+    pbar.close()
+    metrics.end_epoch(epoch=epoch, mode="train")

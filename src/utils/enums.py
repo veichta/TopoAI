@@ -8,3 +8,7 @@ class DatasetEnum(Enum):
     DEEPGLOBE = "deepglobe"
     MIT = "mit"
     ALL = "all"
+
+class ModelsEnum(Enum):
+    UNET = "unet"
+    

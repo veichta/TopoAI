@@ -141,4 +141,4 @@ class Criterion(nn.Module):
         bce_loss = self.bce_fn(inputs, targets, weights)
         mse_loss = self.mse_fn(inputs, targets, weights)
 
-        return bce_loss  # + mio_loss + mse_loss
+        return bce_loss + mio_loss  # + mse_loss
