@@ -58,11 +58,11 @@ class BaseDataset(torch.utils.data.Dataset):
         mask = load_mask(self.masks[index])
         weight = load_weight(self.weights[index])
 
-        # if self.split == "train":
-        #     augmented = self.transforms(image=image, masks=[mask, weight])
-        #     image = augmented["image"]
-        #     mask = augmented["masks"][0]
-        #     weight = augmented["masks"][1]
+        if self.split == "train":
+            augmented = self.transforms(image=image, masks=[mask, weight])
+            image = augmented["image"]
+            mask = augmented["masks"][0]
+            weight = augmented["masks"][1]
 
         assert image.max() <= 1.0, f"Image max: {image.max()}"
         assert image.min() >= 0.0, f"Image min: {image.min()}"
