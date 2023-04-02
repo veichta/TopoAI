@@ -4,8 +4,6 @@ import logging
 import os
 from typing import List
 
-import matplotlib.pyplot as plt
-import numpy as np
 import torch
 import torchvision
 from torch import nn
@@ -60,11 +58,16 @@ class BaseDataset(torch.utils.data.Dataset):
         mask = load_mask(self.masks[index])
         weight = load_weight(self.weights[index])
 
-        if self.split == "train":
-            augmented = self.transforms(image=image, masks=[mask, weight])
-            image = augmented["image"]
-            mask = augmented["masks"][0]
-            weight = augmented["masks"][1]
+        # if self.split == "train":
+        #     augmented = self.transforms(image=image, masks=[mask, weight])
+        #     image = augmented["image"]
+        #     mask = augmented["masks"][0]
+        #     weight = augmented["masks"][1]
+
+        assert image.max() <= 1.0, f"Image max: {image.max()}"
+        assert image.min() >= 0.0, f"Image min: {image.min()}"
+        assert mask.max() <= 1.0, f"Mask max: {mask.max()}"
+        assert mask.min() >= 0.0, f"Mask min: {mask.min()}"
 
         image = torch.from_numpy(image).float()
         mask = torch.from_numpy(mask).float()
@@ -198,16 +201,16 @@ def get_splits(datasets: List[str], args: argparse.Namespace):
     logging.info(f"Valid images: {len(val_images)}")
 
     train_dataset = BaseDataset(
-        img_paths=train_images,
-        mask_paths=train_masks,
-        weight_paths=train_weights,
+        img_paths=sorted(train_images),
+        mask_paths=sorted(train_masks),
+        weight_paths=sorted(train_weights),
         args=args,
         split="train",
     )
     val_dataset = BaseDataset(
-        img_paths=val_images,
-        mask_paths=val_masks,
-        weight_paths=val_weights,
+        img_paths=sorted(val_images),
+        mask_paths=sorted(val_masks),
+        weight_paths=sorted(val_weights),
         args=args,
         split="val",
     )
