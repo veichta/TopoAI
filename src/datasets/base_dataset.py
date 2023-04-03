@@ -184,7 +184,7 @@ def get_splits_simple(path, args):
         split="val",
     )
 
-    return train_dataset, val_dataset
+    return get_dataloader(train_dataset, args), get_dataloader(val_dataset, args)
 
 def get_splits(datasets: List[str], args: argparse.Namespace):
     """Return the splits of the dataset.

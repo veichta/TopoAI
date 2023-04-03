@@ -15,7 +15,9 @@ def linear_schedule(T):
     return torch.linspace(0.01, 0.2, T)
 
 def forward_diffusion(mask, alpha_hat, noise):
-    mask_diffused = torch.sqrt(alpha_hat) * mask + torch.sqrt(1 - alpha_hat) * noise
+    mask_diffused = torch.zeros_like(mask)
+    for b in range(mask.shape[0]):
+        mask_diffused[b] = torch.sqrt(alpha_hat[b]) * mask[b] + torch.sqrt(1 - alpha_hat[b]) * noise[b]
     return mask_diffused
     
 
@@ -31,28 +33,26 @@ def simple_diffusion_step(args, model, train_dl, optimizer, criterion,
 
     model.train()
     for img, mask in train_dl:
-        if i == 0:
-            forward_max = forward_diffusion(mask, alphahats[-1], torch.randn_like(mask))
-            plt.imsave(f"./test/max_distortion.png",forward_max)
-            i += 1
 
         img = img.to(args.device)
         mask = mask.to(args.device)
+
+        mask = mask.unsqueeze(1)
         # weight = weight.to(args.device)
 
-        img = img.permute(2, 0, 1)
-        img = img[:3, :, :]
+        img = img.permute(0, 3, 1, 2)
+        img = img[:, :3, :, :]
 
-        mask = mask.unsqueeze(0).unsqueeze(0)
-        img = img.unsqueeze(0)
+        # mask = mask
+        # img = img
 
-        t = torch.randint(0, T, (1,))
+        t = torch.randint(1, T, (mask.shape[0], ))
         noise = torch.randn_like(mask)
         mask_diffused = forward_diffusion(mask, alphahats[t-1], noise)
         noise_prediction = model(img, mask_diffused, t)
 
         optimizer.zero_grad()
-        
+
         loss = criterion(noise_prediction, noise, reduction="sum")
         loss.backward()
         optimizer.step()
@@ -82,11 +82,10 @@ def eval_simple_diffusion(args, model, val_dl, epoch, metrics):
             mask = mask.to(args.device)
             # weight = weight.to(args.device)
 
-            img = img.permute(2, 0, 1)
-            img = img[:3, :, :]
+            img = img.permute(0, 3, 1, 2)
+            img = img[:, :3, :, :]
 
-            mask = mask.unsqueeze(0).unsqueeze(0)
-            img = img.unsqueeze(0)
+            mask = mask.unsqueeze(0)
 
             x_t = torch.randn_like(mask)
             im_num += 1
@@ -95,12 +94,15 @@ def eval_simple_diffusion(args, model, val_dl, epoch, metrics):
                 noise_prediction = model(img, x_t, torch.tensor([t]))
                 alpha_t = 1 - betas[t-1]
                 alphahat_t = alpha_cumprod[t-1]
-                sigma = torch.sqrt(betas[t-1])
-                mean_prediction = (1 / torch.sqrt(alpha_t)) * (x_t - (betas[t-1] / torch.sqrt(1 - alphahat_t)) * noise_prediction)
-                x_t = mean_prediction + sigma * noise
+                sigma = torch.sqrt(betas[t-1])  
+                mean_prediction = torch.zeros_like(mask)
+                for b in range(mask.shape[0]):
+                    mean_prediction[b] = torch.sqrt(alpha_t[b]) * x_t[b] - torch.sqrt(1 - alphahat_t[b]) * noise_prediction[b]
+                    x_t[b] = mean_prediction[b] + sigma[b] * noise[b]
+                # mean_prediction = (1 / torch.sqrt(alpha_t)) * (x_t - (betas[t-1] / torch.sqrt(1 - alphahat_t)) * noise_prediction)
             # print(x_t)
             # print(x_t.shape, mask.shape)
-            prediction = x_t.squeeze().squeeze().cpu().numpy()
+            prediction = x_t[0].squeeze().cpu().numpy()
             # prediction[prediction > 0.5] = 1
             # prediction[prediction <= 0.5] = 0
             plt.imsave(f"./test/final_prediction_{im_num}.png", prediction)
