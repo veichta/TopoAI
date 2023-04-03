@@ -98,7 +98,25 @@ def get_args() -> argparse.Namespace:
         default=False,
         help="Use wandb for logging",
     )
+
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="unet",
+        help="Model to use",
+    )
+
+    parser.add_argument(
+        "--T",
+        type=int,
+        default=100,
+        help="Number of diffusion steps",
+    )
+
+
     return parser.parse_args()
+
+
 
 
 def setup(args: argparse.Namespace):

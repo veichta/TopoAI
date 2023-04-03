@@ -1,6 +1,12 @@
-python=3.10
-pytorch 
+# python==3.8
+torch 
 torchvision
-opencv
+opencv-python
 matplotlib
 wandb
+matplotlib
+numpy
+pandas
+scikit-learn
+scipy
+tqdm

@@ -6,13 +6,40 @@ from typing import List
 
 import numpy as np
 import torch
-import torchvision
+# import torchvision
 from torch import nn
 
 from src.datasets.data_utils import get_dataloader
 from src.utils.enums import DatasetEnum
 from src.utils.io import list_dir, load_image, load_mask, load_weight
 from src.utils.visualizations import plot_predictions
+
+from sklearn.model_selection import train_test_split
+
+class DebugDataset(torch.utils.data.Dataset):
+    def __init__(self, img_paths, mask_paths, args, split="train"):
+        super(DebugDataset, self).__init__()
+        self.args = args
+        self.split = split
+
+        self.images = img_paths
+        self.masks = mask_paths
+
+    def __len__(self):
+        return len(self.images)
+    
+    def __getitem__(self, idx):
+        image = load_image(self.images[idx])
+        mask = load_mask(self.masks[idx])
+
+        image = torch.from_numpy(image).float()
+        mask = torch.from_numpy(mask).float()
+
+        #normalize image
+        image = (image - image.mean()) / image.std()
+        
+
+        return image, mask
 
 
 class BaseDataset(torch.utils.data.Dataset):
@@ -136,6 +163,29 @@ class BaseDataset(torch.utils.data.Dataset):
         )
 
 
+def get_splits_simple(path, args):
+    print(path)
+    images = list_dir(os.path.join(path, "images"))
+    masks = list_dir(os.path.join(path, "groundtruth"))
+
+    train_images, val_images = train_test_split(images, test_size=0.2, random_state=42)
+    train_masks, val_masks = train_test_split(masks, test_size=0.2, random_state=42)
+
+    train_dataset = DebugDataset(
+        img_paths=train_images,
+        mask_paths=train_masks,
+        args=args,
+        split="train",
+    )
+    val_dataset = DebugDataset(
+        img_paths=val_images,
+        mask_paths=val_masks,
+        args=args,
+        split="val",
+    )
+
+    return train_dataset, val_dataset
+
 def get_splits(datasets: List[str], args: argparse.Namespace):
     """Return the splits of the dataset.
 
@@ -147,8 +197,10 @@ def get_splits(datasets: List[str], args: argparse.Namespace):
     """
 
     images = list_dir(os.path.join(args.data_path, "images"))
-    masks = list_dir(os.path.join(args.data_path, "masks"))
-    weights = list_dir(os.path.join(args.data_path, "weights"))
+    masks = list_dir(os.path.join(args.data_path, "groundtruth"))
+
+    print(images)
+    # weights = list_dir(os.path.join(args.data_path, "weights"))
 
     if DatasetEnum.ALL.value not in datasets:
         images = [
@@ -159,29 +211,29 @@ def get_splits(datasets: List[str], args: argparse.Namespace):
         masks = [
             mask for mask in masks if any(dataset in mask.split("/")[-1] for dataset in datasets)
         ]
-        weights = [
-            weight
-            for weight in weights
-            if any(dataset in weight.split("/")[-1] for dataset in datasets)
-        ]
+        # weights = [
+        #     weight
+        #     for weight in weights
+        #     if any(dataset in weight.split("/")[-1] for dataset in datasets)
+        # ]
 
     images = sorted(images)
     masks = sorted(masks)
-    weights = sorted(weights)
+    # weights = sorted(weights)
 
     order = np.random.permutation(len(images))
 
     images = np.array(images)[order]
     masks = np.array(masks)[order]
-    weights = np.array(weights)[order]
+    # weights = np.array(weights)[order]
 
     train_images = images[: int(0.8 * len(images))]
     train_masks = masks[: int(0.8 * len(masks))]
-    train_weights = weights[: int(0.8 * len(weights))]
+    # train_weights = weights[: int(0.8 * len(weights))]
 
     val_images = images[int(0.8 * len(images)) :]
     val_masks = masks[int(0.8 * len(masks)) :]
-    val_weights = weights[int(0.8 * len(weights)) :]
+    # val_weights = weights[int(0.8 * len(weights)) :]
 
     logging.info(f"Train images: {len(train_images)}")
     logging.info(f"Valid images: {len(val_images)}")
@@ -189,14 +241,14 @@ def get_splits(datasets: List[str], args: argparse.Namespace):
     train_dataset = BaseDataset(
         img_paths=train_images,
         mask_paths=train_masks,
-        weight_paths=train_weights,
+        # weight_paths=train_weights,
         args=args,
         split="train",
     )
     val_dataset = BaseDataset(
         img_paths=val_images,
         mask_paths=val_masks,
-        weight_paths=val_weights,
+        # weight_paths=val_weights,
         args=args,
         split="val",
     )
