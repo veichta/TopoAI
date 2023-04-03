@@ -46,7 +46,7 @@ def simple_diffusion_step(args, model, train_dl, optimizer, criterion,
         # mask = mask
         # img = img
 
-        t = torch.randint(1, T, (mask.shape[0], ))
+        t = torch.randint(1, T, (mask.shape[0], )).to(args.device)
         noise = torch.randn_like(mask)
         mask_diffused = forward_diffusion(mask, alphahats[t-1], noise)
         noise_prediction = model(img, mask_diffused, t)
@@ -91,7 +91,7 @@ def eval_simple_diffusion(args, model, val_dl, epoch, metrics):
             im_num += 1
             for t in range(args.T, 0, -1):
                 noise = torch.randn_like(mask) if t > 1 else torch.zeros_like(mask)
-                noise_prediction = model(img, x_t, torch.tensor([t]))
+                noise_prediction = model(img, x_t, torch.tensor([t], device=args.device))
                 alpha_t = 1 - betas[t-1]
                 alphahat_t = alpha_cumprod[t-1]
                 sigma = torch.sqrt(betas[t-1])
