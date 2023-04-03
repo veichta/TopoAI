@@ -29,7 +29,6 @@ class resnet_block(nn.Module):
         # x = self.gn1(x)
         x = self.act(x)
         if t is not None:
-            print(t.shape)
             t_embed = F.relu(self.time_mlp(t)[0])
             t_embed = t_embed.unsqueeze(1).unsqueeze(2)
             x += t_embed
