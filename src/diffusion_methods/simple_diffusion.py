@@ -94,7 +94,8 @@ def eval_simple_diffusion(args, model, val_dl, epoch, metrics):
                 noise_prediction = model(img, x_t, torch.tensor([t], device=args.device))
                 alpha_t = 1 - betas[t-1]
                 alphahat_t = alpha_cumprod[t-1]
-                sigma = torch.sqrt(betas[t-1])
+                # sigma = torch.sqrt(betas[t-1])
+                sigma = torch.sqrt(((1 - alpha_cumprod[t-2]) / (1 - alpha_cumprod[t-1])) * betas[t-1])
                 mean_prediction = (1 / torch.sqrt(alpha_t)) * (x_t - (betas[t-1] / torch.sqrt(1 - alphahat_t)) * noise_prediction)
                 x_t = mean_prediction + sigma * noise
             # print(x_t)
@@ -103,7 +104,7 @@ def eval_simple_diffusion(args, model, val_dl, epoch, metrics):
             # prediction[prediction > 0.5] = 1
             # prediction[prediction <= 0.5] = 0
             plt.imsave(f"./test/final_prediction_{im_num}.png", prediction)
-            # metrics.update(x_t.squeeze(0), mask.squeeze(0), torch.ones_like(mask.squeeze(0)))
+            # metrics.update(x_t.squeeze(0), mask.squeeze(0), torchim.ones_like(mask.squeeze(0)))
             # pbar.set_postfix(
             #     # loss=np.mean(metrics.epoch_loss),
             #     # iou=np.mean(metrics.epoch_iou),
