@@ -60,14 +60,14 @@ class encoder_decoder(nn.Module):
         self.in_channels = in_channels
         self.out_channels = out_channels
         
-        self.encoder_blocks = []
+        self.encoder_blocks = nn.ModuleList()
 
         current_dimension = self.in_channels
         for i in range(4):
             self.encoder_blocks.append(encoder_decoder_block(current_dimension, current_dimension * 2, transpose=False))
             current_dimension *= 2
         
-        self.decoder_blocks = []
+        self.decoder_blocks = nn.ModuleList()
         for i in range(4):
             self.decoder_blocks.append(encoder_decoder_block(current_dimension, current_dimension // 2, transpose=True))
             current_dimension = current_dimension // 2
