@@ -21,11 +21,7 @@ class resnet_block(nn.Module):
 
         time_dim = 32
 
-        self.time_mlp = nn.Sequential(
-            nn.Linear(time_dim, self.in_channels),
-            nn.ReLU()
-        )
-
+        self.time_mlp = nn.Linear(time_dim, self.in_channels)
 
     def forward(self, x, t):
         x_ = x
@@ -33,7 +29,8 @@ class resnet_block(nn.Module):
         # x = self.gn1(x)
         x = self.act(x)
         if t is not None:
-            t_embed = self.time_mlp(t)[0]
+            print(t.shape)
+            t_embed = F.relu(self.time_mlp(t)[0])
             t_embed = t_embed.unsqueeze(1).unsqueeze(2)
             x += t_embed
         x = self.conv2(x)
