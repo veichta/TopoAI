@@ -52,6 +52,7 @@ def simple_diffusion_step(args, model, train_dl, optimizer, criterion,
         noise_prediction = model(img, mask_diffused, t)
 
         optimizer.zero_grad()
+        
         loss = criterion(noise_prediction, noise, reduction="sum")
         loss.backward()
         optimizer.step()
