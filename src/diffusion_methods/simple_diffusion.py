@@ -99,7 +99,7 @@ def eval_simple_diffusion(args, model, val_dl, epoch, metrics):
                 x_t = mean_prediction + sigma * noise
             # print(x_t)
             # print(x_t.shape, mask.shape)
-            prediction = x_t.squeeze().squeeze().cpu().numpy()
+            prediction = x_t[0].squeeze().squeeze().cpu().numpy()
             # prediction[prediction > 0.5] = 1
             # prediction[prediction <= 0.5] = 0
             plt.imsave(f"./test/final_prediction_{im_num}.png", prediction)
