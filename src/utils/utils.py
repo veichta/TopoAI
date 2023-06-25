@@ -141,6 +141,13 @@ def get_args() -> argparse.Namespace:
         action="store_true",
         help="Log to file",
     )
+
+    parser.add_argument(
+        "--batches_per_epoch",
+        type=int,
+        help="Number of batches per training epoch",
+    )
+
     return parser.parse_args()
 
 

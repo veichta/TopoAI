@@ -23,6 +23,12 @@ def main():
         model = load_model(model=model, args=args)
         model.to(args.device)
 
+    elif args.model == ModelsEnum.UNETPP.value:
+        from src.models.unet_pp import UNetPlus, eval, load_model, train_one_epoch
+
+        model = UNetPlus()
+        model.to(args.device)
+
     logging.info(f"Number of trainable parameters: {model.n_trainable_params / 1e6:.2f} M")
 
     train_dl, val_dl = get_splits(args.datasets, args)

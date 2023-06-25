@@ -11,4 +11,5 @@ class DatasetEnum(Enum):
 
 class ModelsEnum(Enum):
     UNET = "unet"
+    UNETPP = "unet++"
     

@@ -1,6 +1,7 @@
-python=3.10
-pytorch 
+torch 
 torchvision
-opencv
+opencv-python
 matplotlib
 wandb
+albumentations
+tqdm
