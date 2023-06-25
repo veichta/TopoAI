@@ -59,7 +59,7 @@ def iou_fn(inputs: torch.tensor, target: torch.tensor) -> torch.tensor:
     inputs = (inputs > 0.5).float()
     intersection = (inputs * target).sum()
     union = inputs.sum() + target.sum() - intersection
-    return (intersection + 1e-8) / (union - intersection + 1e-8)
+    return (intersection + 1e-8) / (union + 1e-8)
 
 
 class Metrics:
