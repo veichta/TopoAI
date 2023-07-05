@@ -78,7 +78,8 @@ def get_dataloader(
         torch.utils.data.DataLoader: Dataloader for the dataset.
     """
     return torch.utils.data.DataLoader(
-        dataset, batch_size=args.batch_size, shuffle=shuffle, num_workers=args.num_workers
+        dataset, batch_size=args.batch_size, shuffle=shuffle, num_workers=args.num_workers, \
+        pin_memory=args.pin_memory
     )
 
 

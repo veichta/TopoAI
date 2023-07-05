@@ -21,9 +21,11 @@ python3.10 $HOME/DiffusionRoads/main.py \
     --data_path /cluster/scratch/$USER/data.nosync/processed \
     --datasets all \
     --metadata $HOME/DiffusionRoads/metadata.json \
+    --num_workers 4 \
+    --pin_memory \
     --model unet++ \
     --batch_size 4 \
-    --epochs 5 \
+    --epochs 20 \
     --lr 3e-4 \
     --log_dir $HOME/DiffusionRoads/logs \
     --log_to_file \

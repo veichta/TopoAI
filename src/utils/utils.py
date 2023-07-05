@@ -77,6 +77,12 @@ def get_args() -> argparse.Namespace:
         help="Number of workers for dataloader",
     )
 
+    parser.add_argument(
+        "--pin_memory",
+        action="store_true",
+        help="Pin memory of dataloader",
+    )
+
     # MODEL
     parser.add_argument(
         "--model",
@@ -122,6 +128,12 @@ def get_args() -> argparse.Namespace:
         help="Weight for edges in loss",
     )
 
+    parser.add_argument(
+        "--batches_per_epoch",
+        type=int,
+        help="Number of batches per training epoch",
+    )
+
     # LOGGING
     parser.add_argument(
         "--wandb",
@@ -140,12 +152,6 @@ def get_args() -> argparse.Namespace:
         "--log_to_file",
         action="store_true",
         help="Log to file",
-    )
-
-    parser.add_argument(
-        "--batches_per_epoch",
-        type=int,
-        help="Number of batches per training epoch",
     )
 
     return parser.parse_args()
