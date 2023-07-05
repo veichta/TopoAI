@@ -66,7 +66,7 @@ class Metrics:
     def __init__(self, loss_fn: Criterion):
         self.loss_fn = loss_fn
         self.iou_fn = iou_fn
-        self.acc_fn = accuracy_fn
+        self.acc_fn = patch_accuracy_fn
 
         self.train_loss = []
         self.train_bce = []
@@ -240,7 +240,7 @@ class Metrics:
 
         ax[1, 1].plot(self.train_acc, label="train")
         ax[1, 1].plot(self.val_acc, label="val")
-        ax[1, 1].set_title("Accuracy")
+        ax[1, 1].set_title("Patch Accuracy")
         ax[1, 1].legend()
         ax[1, 1].set_xlabel("Epoch")
         ax[1, 1].set_ylabel("Accuracy")
