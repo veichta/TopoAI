@@ -124,7 +124,7 @@ def eval(
             pbar.set_postfix(
                 loss=np.mean(metrics.epoch_loss),
                 iou=np.mean(metrics.epoch_iou),
-                acc=np.mean(metrics.epoch_acc),
+                f1=np.mean(metrics.epoch_f1),
             )
             pbar.update()
 
@@ -174,7 +174,7 @@ def train_one_epoch(
         pbar.set_postfix(
             loss=np.mean(metrics.epoch_loss),
             iou=np.mean(metrics.epoch_iou),
-            acc=np.mean(metrics.epoch_acc),
+            f1=np.mean(metrics.epoch_f1),
         )
         pbar.update()
 
