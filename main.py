@@ -83,7 +83,7 @@ def main():
         if metrics.val_loss[-1] == np.min(metrics.val_loss):
             torch.save(model.state_dict(), os.path.join(args.log_dir, "best_model.pt"))
 
-    best_epoch = np.argmax(metrics.val_acc)
+    best_epoch = np.argmax(metrics.val_f1)
     logging.info(f"Best epoch: {best_epoch + 1}")
     metrics.print_metrics(best_epoch, "eval")
 
