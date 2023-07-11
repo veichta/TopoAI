@@ -197,6 +197,11 @@ def get_splits(datasets: List[str], args: argparse.Namespace):
             if any(dataset in weight.split("/")[-1] for dataset in datasets)
         ]
 
+    # val images only from cil dataset
+    val_images = [image for image in val_images if "cil" in image.split("/")[-1]]
+    val_masks = [mask for mask in val_masks if "cil" in mask.split("/")[-1]]
+    val_weights = [weight for weight in val_weights if "cil" in weight.split("/")[-1]]
+
     logging.info(f"Train images: {len(train_images)}")
     logging.info(f"Valid images: {len(val_images)}")
 

@@ -167,6 +167,7 @@ def setup(args: argparse.Namespace):
     if args.wandb:
         wandb.init(
             project="DiffusionRoads",
+            entity="diffusion-roads",
             config=vars(get_args()),
         )
 

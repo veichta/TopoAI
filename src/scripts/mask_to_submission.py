@@ -11,18 +11,21 @@ from absl import app, flags
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string(
-    "submission_filename", "dummy_submission.csv", "The output csv for the submission."
+    "submission_filename", "data/submission.csv", "The output csv for the submission."
 )
-flags.DEFINE_string("base_dir", "training/groundtruth", "The directory with the predicted masks.")
+# flags.DEFINE_string("base_dir", "training/groundtruth", "The directory with the predicted masks.")
+flags.DEFINE_string("base_dir", "data/preds", "The directory with the predicted masks.")
 
 foreground_threshold = (
     0.25  # percentage of pixels of val 255 required to assign a foreground label to a patch
 )
 
+
 # assign a label to a patch
 def patch_to_label(patch):
     patch = patch.astype(np.float64) / 255
     df = np.mean(patch)
+    print(df)
     if df > foreground_threshold:
         return 1
     else:
@@ -44,6 +47,7 @@ def mask_to_submission_strings(image_filename, mask_dir=None):
     for j in range(0, im_arr.shape[1], patch_size):
         for i in range(0, im_arr.shape[0], patch_size):
             patch = im_arr[i : i + patch_size, j : j + patch_size]
+            print(f"{img_number} {j} {i}:")
             label = patch_to_label(patch)
             mask[i : i + patch_size, j : j + patch_size] = int(label * 255)
             yield ("{:03d}_{}_{},{}".format(img_number, j, i, label))

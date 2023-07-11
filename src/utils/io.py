@@ -13,7 +13,7 @@ def load_image(path: str) -> np.ndarray:
     Returns:
         np.ndarray: Image as numpy array.
     """
-    return np.array(Image.open(path), dtype=np.float32) / 255.0
+    return np.array(Image.open(path), dtype=np.float32)[:, :, :3] / 255.0
 
 
 def load_mask(path: str) -> np.ndarray:
@@ -56,6 +56,18 @@ def save_image(img: np.ndarray, path: str) -> None:
         path (str): Path to save image to.
     """
     Image.fromarray(img).save(path)
+
+
+def save_mask(mask: np.ndarray, path: str) -> None:
+    """Save mask to path.
+
+    Args:
+        mask (np.ndarray): Mask to save.
+        path (str): Path to save mask to.
+    """
+    mask = Image.fromarray(mask)
+    mask = mask.convert("L")
+    mask.save(path)
 
 
 def list_dir(path: str) -> list:

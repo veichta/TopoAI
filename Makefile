@@ -8,3 +8,6 @@ preprocess_data:
 	python src/preprocessing/preprocessing.py
 
 preprocessing: move_data preprocess_data
+
+sync:
+	rsync -auv --progress --exclude-from=.gitignore --exclude=data . ${USR}@euler.ethz.ch:/cluster/home/${USR}/code/DiffusionRoads

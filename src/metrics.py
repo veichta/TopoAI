@@ -51,7 +51,7 @@ def patch_f1(inputs: torch.tensor, targets: torch.tensor) -> torch.tensor:
     patches = (
         targets.reshape(-1, 1, h_patches, PATCH_SIZE, w_patches, PATCH_SIZE).mean((-1, -3)) > CUTOFF
     )
-    
+
     # compute true positives, false positives, false negatives for each sample
     tp = (patches & patches_hat).float().sum((1, 2, 3))
     fp = (~patches & patches_hat).float().sum((1, 2, 3))
@@ -95,6 +95,7 @@ class Metrics:
     def __init__(self, loss_fn: Criterion):
         self.loss_fn = loss_fn
         self.iou_fn = iou_fn
+        self.acc_fn = accuracy_fn
         self.f1_fn = patch_f1
 
         self.train_loss = []
@@ -103,6 +104,7 @@ class Metrics:
         self.train_mse = []
 
         self.train_iou = []
+        self.train_acc = []
         self.train_f1 = []
 
         self.val_loss = []
@@ -111,6 +113,7 @@ class Metrics:
         self.val_mse = []
 
         self.val_iou = []
+        self.val_acc = []
         self.val_f1 = []
 
     def start_epoch(self):
@@ -121,6 +124,7 @@ class Metrics:
         self.epoch_mse = []
 
         self.epoch_iou = []
+        self.epoch_acc = []
         self.epoch_f1 = []
 
     def update(self, pred: torch.tensor, target: torch.tensor, weight: torch.tensor):
@@ -138,6 +142,7 @@ class Metrics:
         mse = self.loss_fn.mse_fn(pred, target, weight)
 
         iou = self.iou_fn(pred, target)
+        acc = self.acc_fn(pred, target)
         f1 = self.f1_fn(pred, target)
 
         self.epoch_loss.append(loss.item())
@@ -146,6 +151,7 @@ class Metrics:
         self.epoch_mse.append(mse.item())
 
         self.epoch_iou.append(iou.item())
+        self.epoch_acc.append(acc.item())
         self.epoch_f1.append(f1.item())
 
     def end_epoch(self, epoch: int, mode: str):
@@ -162,6 +168,7 @@ class Metrics:
             self.train_mse.append(np.mean(self.epoch_mse))
 
             self.train_iou.append(np.mean(self.epoch_iou))
+            self.train_acc.append(np.mean(self.epoch_acc))
             self.train_f1.append(np.mean(self.epoch_f1))
 
         elif mode == "eval":
@@ -171,6 +178,7 @@ class Metrics:
             self.val_mse.append(np.mean(self.epoch_mse))
 
             self.val_iou.append(np.mean(self.epoch_iou))
+            self.val_acc.append(np.mean(self.epoch_acc))
             self.val_f1.append(np.mean(self.epoch_f1))
 
         else:
@@ -202,7 +210,8 @@ class Metrics:
             logging.info(f"\tmse:  {self.train_mse[epoch]:.4f}")
 
             logging.info(f"\tiou:  {self.train_iou[epoch]:.4f}")
-            logging.info(f"\tf1:  {self.train_f1[epoch]:.4f}")
+            logging.info(f"\tacc:  {self.train_acc[epoch]:.4f}")
+            logging.info(f"\tf1:   {self.train_f1[epoch]:.4f}")
         elif mode == "eval":
             logging.info(f"\tloss: {self.val_loss[epoch]:.4f}")
             logging.info(f"\tbce:  {self.val_bce[epoch]:.4f}")
@@ -210,7 +219,8 @@ class Metrics:
             logging.info(f"\tmse:  {self.val_mse[epoch]:.4f}")
 
             logging.info(f"\tiou:  {self.val_iou[epoch]:.4f}")
-            logging.info(f"\tf1:  {self.val_f1[epoch]:.4f}")
+            logging.info(f"\tacc:  {self.val_acc[epoch]:.4f}")
+            logging.info(f"\tf1:   {self.val_f1[epoch]:.4f}")
 
         logging.info("-" * 30)
 
@@ -226,12 +236,14 @@ class Metrics:
             "train_miou": self.train_miou,
             "train_mse": self.train_mse,
             "train_iou": self.train_iou,
+            "train_acc": self.train_acc,
             "train_f1": self.train_f1,
             "val_loss": self.val_loss,
             "val_bce": self.val_bce,
             "val_miou": self.val_miou,
             "val_mse": self.val_mse,
             "val_iou": self.val_iou,
+            "val_acc": self.val_acc,
             "val_f1": self.val_f1,
         }
 
