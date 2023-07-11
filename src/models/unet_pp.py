@@ -53,8 +53,12 @@ class UNetPlus(nn.Module):
         self.skip_convs = nn.ModuleList(
             [
                 nn.ModuleList(
-                    [
-                        nn.Conv2d(int(self.skip_in_chs[i,j]), chs[1] * 2**i, 1)
+                    [   
+                        # convolutional layer with ReLU activation
+                        nn.Sequential(
+                            nn.Conv2d(int(self.skip_in_chs[i,j]), chs[1] * 2**i, 1),
+                            nn.ReLU()
+                        )
                         for j in range(1, num_cols - 1 - i)
                     ]
                 )
