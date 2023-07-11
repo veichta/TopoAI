@@ -1,8 +1,5 @@
 # Folders
-data.nosync/raw/*
-data.nosync/processed/*
-data.nosync/model_checkpoints/*
-data.nosync/model_output/*
+data/**
 plots/**
 logs/**
 
