@@ -134,7 +134,7 @@ class CustomMSELoss(nn.Module):
 
 
 class FocalLoss(nn.Module):
-    def __inti__(self, args, gamma=2, alpha=0.5, size_average=True):
+    def __init__(self, args, gamma=2, alpha=0.5, size_average=True):
         super(FocalLoss, self).__init__()
         self.bce_fn = CustomBCELoss(args, size_average=False)
         self.gamma = gamma
