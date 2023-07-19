@@ -94,6 +94,7 @@ def load_model(model: nn.Module, args: argparse.Namespace) -> nn.Module:
 def eval(
     model: BaseUNet,
     val_dl: torch.utils.data.DataLoader,
+    criterion: nn.Module,
     metrics: Metrics,
     epoch: int,
     args: argparse.Namespace,
@@ -103,6 +104,7 @@ def eval(
     Args:
         model (nn.Module): BaseUNet model.
         val_dl (torch.utils.data.DataLoader): Validation data loader.
+        criterion (nn.Module): Loss function.
         metrics (Metrics): Metrics object.
         epoch (int): Current epoch.
         args (argparse.Namespace): Arguments.
@@ -124,12 +126,12 @@ def eval(
             pbar.set_postfix(
                 loss=np.mean(metrics.epoch_loss),
                 iou=np.mean(metrics.epoch_iou),
-                f1=np.mean(metrics.epoch_f1),
+                acc=np.mean(metrics.epoch_acc),
             )
             pbar.update()
 
     pbar.close()
-    metrics.end_epoch(epoch=epoch, mode="eval")
+    metrics.end_epoch(epoch=epoch, mode="eval", log_wandb=args.wandb)
 
 
 def train_one_epoch(
@@ -174,9 +176,9 @@ def train_one_epoch(
         pbar.set_postfix(
             loss=np.mean(metrics.epoch_loss),
             iou=np.mean(metrics.epoch_iou),
-            f1=np.mean(metrics.epoch_f1),
+            acc=np.mean(metrics.epoch_acc),
         )
         pbar.update()
 
     pbar.close()
-    metrics.end_epoch(epoch=epoch, mode="train")
+    metrics.end_epoch(epoch=epoch, mode="train", log_wandb=args.wandb)

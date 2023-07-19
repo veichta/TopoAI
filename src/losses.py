@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
+from torchvision.ops import sigmoid_focal_loss
 
 
 def normalize_weights(weights: torch.tensor) -> torch.tensor:
@@ -80,10 +81,11 @@ class mIoULoss(nn.Module):
 
 
 class CustomBCELoss(nn.Module):
-    def __init__(self, args):
+    def __init__(self, args, size_average=True):
         super(CustomBCELoss, self).__init__()
         self.bce_fn = nn.BCELoss(reduction="none")
         self.alpha = args.edge_weight
+        self.size_average = size_average
 
     def forward(
         self, inputs: torch.tensor, targets: torch.tensor, weights: torch.tensor
@@ -101,7 +103,7 @@ class CustomBCELoss(nn.Module):
         loss = self.bce_fn(inputs, targets)
         weight = normalize_weights(weights)
         w = (1 - self.alpha) + self.alpha * weight
-        return torch.mean(w * loss)
+        return torch.mean(w * loss) if self.size_average else torch.sum(w * loss)
 
 
 class CustomMSELoss(nn.Module):
@@ -129,16 +131,35 @@ class CustomMSELoss(nn.Module):
         return torch.mean(w * loss)
 
 
+class FocalLoss(nn.Module):
+    def __inti__(self, args, gamma=2, alpha=0.5, size_average=True):
+        super(FocalLoss, self).__init__()
+        self.bce_fn = CustomBCELoss(args, size_average=False)
+        self.gamma = gamma
+        self.alpha = alpha
+        self.size_average = size_average
+
+    def forward(self, inputs, targets, weights):
+        bce = self.bce_fn(inputs, targets, weights)
+        pt = torch.exp(-bce)
+        focal_loss = self.alpha * (1 - pt) ** self.gamma * bce
+        return focal_loss.mean() if self.size_average else focal_loss.sum()
+
+
 class Criterion(nn.Module):
     def __init__(self, args):
         super(Criterion, self).__init__()
         self.bce_fn = CustomBCELoss(args)
         self.mse_fn = CustomMSELoss(args)
         self.mIoU_fn = mIoULoss()
+        self.focal_fn = sigmoid_focal_loss
+
+        self.args = args
 
     def forward(self, inputs, targets, weights):
-        mio_loss = self.mIoU_fn(inputs, targets)
-        bce_loss = self.bce_fn(inputs, targets, weights)
-        mse_loss = self.mse_fn(inputs, targets, weights)
+        miou_loss = self.mIoU_fn(inputs, targets) * self.args.miou_weight
+        bce_loss = self.bce_fn(inputs, targets, weights) * self.args.bce_weight
+        mse_loss = self.mse_fn(inputs, targets, weights) * self.args.mse_weight
+        focal_loss = self.focal_fn(inputs, targets, reduction="mean") * self.args.focal_weight
 
-        return bce_loss + mio_loss  # + mse_loss
+        return miou_loss + bce_loss + mse_loss + focal_loss
