@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from torchvision.ops import sigmoid_focal_loss
+from topologylayer.nn import LevelSetLayer2D, TopKBarcodeLengths
 
 from .utils.soft_skeleton import soft_skel
 
@@ -148,6 +149,47 @@ class FocalLoss(nn.Module):
         return focal_loss.mean() if self.size_average else focal_loss.sum()
 
 
+class TopoLoss(nn.Module):
+    def __init__(self, k0=3, k0_max=20, k1=3, k1_max=20):
+        super(TopoLoss, self).__init__()
+        self.layer = LevelSetLayer2D(size=(400,400), maxdim=1, sublevel=False)
+        self.top_k0 = TopKBarcodeLengths(dim=0, k=k0)
+        self.top_k1 = TopKBarcodeLengths(dim=1, k=k1)
+        self.k0 = k0
+        self.k1 = k1
+        self.k0_max = k0_max
+        self.k1_max = k1_max
+
+    def forward(self, inputs):
+
+        loss = 0
+
+        for i in range(inputs.shape[0]):
+            
+            # compute bars
+            bars = self.layer(inputs[i])
+
+            # get squared lengths of bars
+            lengths_0 = self.top_k0(bars)**2
+
+            # compute loss for dimension 0 topological features
+            signs = torch.ones(self.k0)
+            signs[:self.k0_max] = -1
+            l0 = torch.sum(signs * lengths_0)
+
+            # get squared lengths of bars for dimension 1
+            lengths_1 = self.top_k1(bars)**2
+
+            # compute loss for dimension 1 topological features
+            signs = torch.ones(self.k1)
+            signs[:self.k1_max] = -1
+            l1 = torch.sum(signs * lengths_1)
+
+            loss  += l0 + l1
+
+        return loss / inputs.shape[0]
+    
+    
 class Criterion(nn.Module):
     def __init__(self, args):
         super(Criterion, self).__init__()
