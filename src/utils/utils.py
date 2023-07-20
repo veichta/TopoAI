@@ -227,6 +227,12 @@ def get_args() -> argparse.Namespace:
         default=1,
         help="weight of cl_dice loss",
     )
+    parser.add_argument(
+        "--topo_weight",
+        type=float,
+        default=0.1,
+        help="Weight for topological loss",
+    )
 
     # LOGGING
     parser.add_argument(

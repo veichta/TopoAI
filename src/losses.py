@@ -199,6 +199,8 @@ class Criterion(nn.Module):
         self.focal_fn = sigmoid_focal_loss
         self.soft_dice_cldice_fn = soft_dice_cldice(args)
 
+        self.topo_fn = TopoLoss()
+
         self.args = args
 
     def forward(self, inputs, targets, weights):
@@ -304,6 +306,7 @@ def calculate_weights(pred, edge_weights, args):
         weight = normalize_weights(weight.to(args.device))
         weight = args.gaploss_weight * weight
         loss_weights += weight.squeeze(1)
-        
+                topo_loss = self.topo_fn(inputs) * self.args.topo_weight
+
     return loss_weights
-    
+     + topo_loss
