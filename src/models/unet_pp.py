@@ -224,8 +224,6 @@ def train_one_epoch(
     """
     logging.info(f"Epoch {epoch + 1}/{args.epochs}")
     pbar = tqdm(train_dl, bar_format="{l_bar}{bar:20}{r_bar}{bar:-20b}")
-    if args.batches_per_epoch is not None:
-        pbar.total = args.batches_per_epoch
     pbar.set_description(f"Epoch {epoch + 1}/{args.epochs}")
     model.train()
     metrics.start_epoch()
