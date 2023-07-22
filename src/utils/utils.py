@@ -140,12 +140,6 @@ def get_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
-        "--batches_per_epoch",
-        type=int,
-        help="Number of batches per training epoch",
-    )
-
-    parser.add_argument(
         "--patience",
         type=int,
         default=20,
