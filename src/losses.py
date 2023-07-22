@@ -149,20 +149,32 @@ class FocalLoss(nn.Module):
         return focal_loss.mean() if self.size_average else focal_loss.sum()
 
 
-class TopoLoss(nn.Module):
-    def __init__(self, k0=3, k0_max=20, k1=3, k1_max=20):
-        super(TopoLoss, self).__init__()
-        self.layer = LevelSetLayer2D(size=(400,400), maxdim=1, sublevel=False)
-        self.top_k0 = TopKBarcodeLengths(dim=0, k=k0)
-        self.top_k1 = TopKBarcodeLengths(dim=1, k=k1)
-        self.k0 = k0
-        self.k1 = k1
-        self.k0_max = k0_max
-        self.k1_max = k1_max
+class TopoGradLoss(nn.Module):
+    def __init__(self, args, k0_max=20, k1_max=20):
+        super(TopoGradLoss, self).__init__()
+        # layer to compute the bars
+        self.layer = LevelSetLayer2D(size=(100,100), maxdim=1, sublevel=False)
+
+        # prior maximize bar lengths for first k0 bars for dimension 0 and k1 bars for dimension 1
+        self.top_k0 = TopKBarcodeLengths(dim=0, k=k0_max)
+        self.top_k1 = TopKBarcodeLengths(dim=1, k=k1_max)
+
+        # maximize the first k0 bars for dimension 0 and k1 bars for dimension 1
+        self.signs_0 = torch.ones(k0_max, device=args.device)
+        self.signs_0[:args.topo_k0] = -1
+
+        self.signs_1 = torch.ones(k1_max, device=args.device)
+        self.signs_1[:args.topo_k1] = -1
+
 
     def forward(self, inputs):
 
         loss = 0
+
+        # downsample to make loss computation faster
+        inputs = torch.unsqueeze(inputs, dim=1)
+        inputs = torch.nn.functional.interpolate(inputs, size=(100,100), mode='bicubic')
+        inputs = torch.squeeze(inputs, dim=1)
 
         for i in range(inputs.shape[0]):
             
@@ -173,17 +185,13 @@ class TopoLoss(nn.Module):
             lengths_0 = self.top_k0(bars)**2
 
             # compute loss for dimension 0 topological features
-            signs = torch.ones(self.k0)
-            signs[:self.k0_max] = -1
-            l0 = torch.sum(signs * lengths_0)
+            l0 = torch.sum(self.signs_0 * lengths_0)
 
             # get squared lengths of bars for dimension 1
             lengths_1 = self.top_k1(bars)**2
 
             # compute loss for dimension 1 topological features
-            signs = torch.ones(self.k1)
-            signs[:self.k1_max] = -1
-            l1 = torch.sum(signs * lengths_1)
+            l1 = torch.sum(self.signs_1 * lengths_1)
 
             loss  += l0 + l1
 
@@ -199,7 +207,7 @@ class Criterion(nn.Module):
         self.focal_fn = sigmoid_focal_loss
         self.soft_dice_cldice_fn = soft_dice_cldice(args)
 
-        self.topo_fn = TopoLoss()
+        self.topo_fn = TopoGradLoss(args)
 
         self.args = args
 
