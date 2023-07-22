@@ -185,6 +185,8 @@ def eval(
             img = img.to(args.device)
             mask = mask.to(args.device)
             
+            out = model(img)
+            
             if args.edge_weight > 0:
                 weight = normalize_weights(weight.to(args.device))
                 weight = (1 - args.edge_weight) + args.edge_weight * weight
@@ -193,7 +195,6 @@ def eval(
             else:
                 weight = torch.ones_like(mask).to(args.device)
 
-            out = model(img)
             metrics.update(out, mask, weight)
 
             pbar.set_postfix(
