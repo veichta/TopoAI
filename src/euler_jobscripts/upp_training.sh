@@ -23,5 +23,11 @@ python3.10 $HOME/DiffusionRoads/main.py \
     --batch_size 8 \
     --epochs 100 \
     --lr 3e-4 \
-    --log_dir $HOME/DiffusionRoads/logs \
+    --miou_weight 0.0 \
+    --bce_weight 1.0 \
+    --mse_weight 0.0 \
+    --focal_weight 0.0 \
+    --vec_weight 0.0 \
+    --topo_weight 0.1 \
+    --log_dir /cluster/scratch/$USER/logs \
     --log_to_file \

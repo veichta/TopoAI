@@ -23,6 +23,6 @@ python3.10 $HOME/DiffusionRoads/main.py \
     --pin_memory \
     --model unet++ \
     --batch_size 8 \
-    --log_dir $HOME/DiffusionRoads/logs \
+    --log_dir /cluster/scratch/$USER/logs \
     --log_to_file \
 
