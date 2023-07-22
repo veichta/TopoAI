@@ -224,7 +224,7 @@ def get_args() -> argparse.Namespace:
     parser.add_argument(
         "--topo_weight",
         type=float,
-        default=0.1,
+        default=0.0,
         help="Weight for topological loss",
     )
 

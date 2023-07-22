@@ -211,14 +211,20 @@ class Criterion(nn.Module):
 
         self.args = args
 
+        self.topo_loss = 0
+
     def forward(self, inputs, targets, weights):
+
+        if self.args.topo_weight > 0:
+            self.topo_loss = self.topo_fn(inputs) * self.args.topo_weight
+
         miou_loss = self.mIoU_fn(inputs, targets) * self.args.miou_weight
         bce_loss = self.bce_fn(inputs, targets, weights) * self.args.bce_weight
         mse_loss = self.mse_fn(inputs, targets, weights) * self.args.mse_weight
         focal_loss = self.focal_fn(inputs, targets, reduction="mean") * self.args.focal_weight
         cl_dice_loss = self.soft_dice_cldice_fn(inputs, targets) * self.args.cl_dice_weight
 
-        return miou_loss + bce_loss + mse_loss + focal_loss + cl_dice_loss
+        return miou_loss + bce_loss + mse_loss + focal_loss + cl_dice_loss + self.topo_loss
     
 def GapLoss_weights(pred_mask, corner_region = 25, to_plot=False):
     from skimage.morphology import skeletonize
@@ -314,7 +320,5 @@ def calculate_weights(pred, edge_weights, args):
         weight = normalize_weights(weight.to(args.device))
         weight = args.gaploss_weight * weight
         loss_weights += weight.squeeze(1)
-                topo_loss = self.topo_fn(inputs) * self.args.topo_weight
 
     return loss_weights
-     + topo_loss
