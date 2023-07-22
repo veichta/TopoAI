@@ -11,6 +11,8 @@ from tqdm import tqdm
 from src.metrics import Metrics
 from src.models.spin import spin
 
+from src.losses import normalize_weights, GapLoss_weights
+
 affine_par = True
 
 
@@ -423,10 +425,17 @@ def train_one_epoch(
     batch_count = 0
     for img, mask, weight, vec in train_dl:
         mask = [m.to(args.device) for m in mask]
-        weight = [w.to(args.device) for w in weight]
+        # weight = [w.to(args.device) for w in weight]
         vec = [v.to(args.device) for v in vec]
 
         mask_pred, vec_pred = model(img)
+        if args.edge_weight > 0:
+            weight = normalize_weights(weight.to(args.device))
+            weight = (1 - args.edge_weight) + args.edge_weight * weight
+        elif args.gaploss_weight > 0:
+            weight = GapLoss_weights(mask_pred, args.gaploss_weight)
+        else:
+            weight = torch.ones_like(mask).to(args.device)
         loss = criterion(mask_pred, vec_pred, mask, vec, weight)
 
         mask = mask[-1]
@@ -482,10 +491,19 @@ def eval(
             img = img.to(args.device)
 
             mask = [m.to(args.device) for m in mask]
-            weight = [w.to(args.device) for w in weight]
+            # weight = [w.to(args.device) for w in weight]
             vec = [v.to(args.device) for v in vec]
 
             mask_pred, vec_pred = model(img)
+            
+            if args.edge_weight > 0:
+                weight = normalize_weights(weight.to(args.device))
+                weight = (1 - args.edge_weight) + args.edge_weight * weight
+            elif args.gaploss_weight > 0:
+                weight = GapLoss_weights(mask_pred, args.gaploss_weight)
+            else:
+                weight = torch.ones_like(mask).to(args.device)
+
             loss = criterion(mask_pred, vec_pred, mask, vec, weight)
 
             mask = mask[-1]

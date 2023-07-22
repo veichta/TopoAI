@@ -4,6 +4,7 @@ import torch
 
 import wandb
 
+from src.losses import GapLoss_weights
 
 def overlay_image_mask(img: np.ndarray, mask: np.ndarray, alpha: float = 0.5) -> np.ndarray:
     """Overlay image and mask.
@@ -28,9 +29,13 @@ def plot_predictions(
     weights: torch.Tensor = None,
     filename: str = None,
     log_wandb: bool = False,
+    plot_Gaploss: bool = False,
 ) -> None:
     num_images = images.shape[0]
     fig, ax = plt.subplots(num_images, 3, figsize=(15, num_images * 5))
+    if plot_Gaploss:
+        C, W, skeletons = GapLoss_weights(predictions, to_plot=True)
+        
     for i in range(num_images):
         img = images[i].detach().cpu().numpy()
         prediction = predictions[i].detach().cpu().numpy()
@@ -50,8 +55,10 @@ def plot_predictions(
 
         pred_img = pred_img.astype(np.uint8)
         ax[i, 1].imshow(pred_img)
-        if weights is not None:
+        if weights is not None and not plot_Gaploss:
             ax[i, 2].imshow(weights[i].detach().cpu().numpy() + masks[i].detach().cpu().numpy())
+        elif plot_Gaploss:
+            ax[i, 2].imshow(W[i])
 
     ax[0, 0].set_title("Image + Mask")
     ax[0, 1].set_title("Mask")

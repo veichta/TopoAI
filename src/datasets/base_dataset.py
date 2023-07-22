@@ -217,6 +217,7 @@ class BaseDataset(torch.utils.data.Dataset):
             weights=weights,
             filename=filename,
             log_wandb=self.args.wandb,
+            plot_Gaploss=self.args.gaploss_weight > 0,
         )
 
 

@@ -67,7 +67,7 @@ def main():
             args=args,
         )
 
-        val_dl.dataset.plot_predictions(model, filename=os.path.join(args.log_dir, "eval.png"))
+        val_dl.dataset.plot_predictions(model, filename=os.path.join(args.log_dir, "eval.png"), plot_Gaploss=args.gaploss_weight > 0,)
         metrics.save_metrics(os.path.join(args.log_dir, "metrics.json"))
         return
 
