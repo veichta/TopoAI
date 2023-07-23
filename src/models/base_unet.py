@@ -7,6 +7,7 @@ import torch.nn as nn
 from tqdm import tqdm
 
 from src.metrics import Metrics
+from src.losses import normalize_weights, GapLoss_weights
 
 
 class Block(nn.Module):
@@ -94,6 +95,7 @@ def load_model(model: nn.Module, args: argparse.Namespace) -> nn.Module:
 def eval(
     model: BaseUNet,
     val_dl: torch.utils.data.DataLoader,
+    criterion: nn.Module,
     metrics: Metrics,
     epoch: int,
     args: argparse.Namespace,
@@ -103,6 +105,7 @@ def eval(
     Args:
         model (nn.Module): BaseUNet model.
         val_dl (torch.utils.data.DataLoader): Validation data loader.
+        criterion (nn.Module): Loss function.
         metrics (Metrics): Metrics object.
         epoch (int): Current epoch.
         args (argparse.Namespace): Arguments.
@@ -116,9 +119,16 @@ def eval(
         for img, mask, weight in val_dl:
             img = img.to(args.device)
             mask = mask.to(args.device)
-            weight = weight.to(args.device)
 
             out = model(img)
+            if args.edge_weight > 0:
+                weight = normalize_weights(weight.to(args.device))
+                weight = (1 - args.edge_weight) + args.edge_weight * weight
+            elif args.gaploss_weight > 0:
+                weight = GapLoss_weights(out, args.gaploss_weight)
+            else:
+                weight = torch.ones_like(mask).to(args.device)
+            
             metrics.update(out, mask, weight)
 
             pbar.set_postfix(
@@ -129,7 +139,7 @@ def eval(
             pbar.update()
 
     pbar.close()
-    metrics.end_epoch(epoch=epoch, mode="eval")
+    metrics.end_epoch(epoch=epoch, mode="eval", log_wandb=args.wandb)
 
 
 def train_one_epoch(
@@ -160,9 +170,17 @@ def train_one_epoch(
     for img, mask, weight in train_dl:
         img = img.to(args.device)
         mask = mask.to(args.device)
-        weight = weight.to(args.device)
 
         out = model(img)
+        
+        if args.edge_weight > 0:
+            weight = normalize_weights(weight.to(args.device))
+            weight = (1 - args.edge_weight) + args.edge_weight * weight
+        elif args.gaploss_weight > 0:
+            weight = GapLoss_weights(out, args.gaploss_weight)
+        else:
+            weight = torch.ones_like(mask).to(args.device)
+        
         loss = criterion(out, mask, weight)
 
         metrics.update(out, mask, weight)
@@ -179,4 +197,4 @@ def train_one_epoch(
         pbar.update()
 
     pbar.close()
-    metrics.end_epoch(epoch=epoch, mode="train")
+    metrics.end_epoch(epoch=epoch, mode="train", log_wandb=args.wandb)

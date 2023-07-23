@@ -4,6 +4,7 @@ import logging
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+import wandb
 
 from src.losses import Criterion
 
@@ -31,6 +32,35 @@ def patch_accuracy_fn(inputs: torch.tensor, targets: torch.tensor) -> torch.tens
         targets.reshape(-1, 1, h_patches, PATCH_SIZE, w_patches, PATCH_SIZE).mean((-1, -3)) > CUTOFF
     )
     return (patches == patches_hat).float().mean()
+
+
+def patch_f1(inputs: torch.tensor, targets: torch.tensor) -> torch.tensor:
+    """Computes patch accuracy between inputs and targets.
+
+    Args:
+        inputs (torch.tensor): Model predictions.
+        targets (torch.tensor): Ground truth.
+
+    Returns:
+        torch.tensor: The patch accuracy computed as the mean of the rounded inputs and targets.
+    """
+    h_patches = targets.shape[-2] // PATCH_SIZE
+    w_patches = targets.shape[-1] // PATCH_SIZE
+    patches_hat = (
+        inputs.reshape(-1, 1, h_patches, PATCH_SIZE, w_patches, PATCH_SIZE).mean((-1, -3)) > CUTOFF
+    )
+    patches = (
+        targets.reshape(-1, 1, h_patches, PATCH_SIZE, w_patches, PATCH_SIZE).mean((-1, -3)) > CUTOFF
+    )
+
+    # compute true positives, false positives, false negatives for each sample
+    tp = (patches & patches_hat).float().sum((1, 2, 3))
+    fp = (~patches & patches_hat).float().sum((1, 2, 3))
+    fn = (patches & ~patches_hat).float().sum((1, 2, 3))
+
+    # compute micro f1 score
+    f1_scores = tp / (tp + 0.5 * (fp + fn) + 1e-8)
+    return f1_scores.mean()
 
 
 def accuracy_fn(inputs: torch.tensor, targets: torch.tensor) -> torch.tensor:
@@ -67,6 +97,7 @@ class Metrics:
         self.loss_fn = loss_fn
         self.iou_fn = iou_fn
         self.acc_fn = accuracy_fn
+        self.f1_fn = patch_f1
 
         self.train_loss = []
         self.train_bce = []
@@ -75,6 +106,7 @@ class Metrics:
 
         self.train_iou = []
         self.train_acc = []
+        self.train_f1 = []
 
         self.val_loss = []
         self.val_bce = []
@@ -83,6 +115,7 @@ class Metrics:
 
         self.val_iou = []
         self.val_acc = []
+        self.val_f1 = []
 
     def start_epoch(self):
         """Starts a new epoch by resetting the metrics."""
@@ -93,16 +126,25 @@ class Metrics:
 
         self.epoch_iou = []
         self.epoch_acc = []
+        self.epoch_f1 = []
 
-    def update(self, pred: torch.tensor, target: torch.tensor, weight: torch.tensor):
+    def update(
+        self,
+        pred: torch.tensor,
+        target: torch.tensor,
+        weight: torch.tensor,
+        loss: torch.tensor = None,
+    ):
         """Updates the metrics with the given predictions and targets.
 
         Args:
             pred (torch.tensor): Model predictions.
             target (torch.tensor): Ground truth.
             weight (torch.tensor): Weight for each prediction.
+            loss (torch.tensor): Loss for the given predictions and targets.
         """
-        loss = self.loss_fn(pred, target, weight)
+        if loss is None:
+            loss = self.loss_fn(pred, target, weight)
 
         bce = self.loss_fn.bce_fn(pred, target, weight)
         miou = self.loss_fn.mIoU_fn(pred, target, weight)
@@ -110,6 +152,7 @@ class Metrics:
 
         iou = self.iou_fn(pred, target)
         acc = self.acc_fn(pred, target)
+        f1 = self.f1_fn(pred, target)
 
         self.epoch_loss.append(loss.item())
         self.epoch_bce.append(bce.item())
@@ -118,8 +161,9 @@ class Metrics:
 
         self.epoch_iou.append(iou.item())
         self.epoch_acc.append(acc.item())
+        self.epoch_f1.append(f1.item())
 
-    def end_epoch(self, epoch: int, mode: str):
+    def end_epoch(self, epoch: int, mode: str, log_wandb: bool = False):
         """Ends the current epoch by computing the mean of the metrics and printing them.
 
         Args:
@@ -134,6 +178,7 @@ class Metrics:
 
             self.train_iou.append(np.mean(self.epoch_iou))
             self.train_acc.append(np.mean(self.epoch_acc))
+            self.train_f1.append(np.mean(self.epoch_f1))
 
         elif mode == "eval":
             self.val_loss.append(np.mean(self.epoch_loss))
@@ -143,11 +188,15 @@ class Metrics:
 
             self.val_iou.append(np.mean(self.epoch_iou))
             self.val_acc.append(np.mean(self.epoch_acc))
+            self.val_f1.append(np.mean(self.epoch_f1))
 
         else:
             raise ValueError(f"Unknown mode {mode}")
 
         self.print_metrics(epoch, mode)
+
+        if log_wandb:
+            self.log_to_wandb(epoch, mode)
 
     def print_metrics(self, epoch: int, mode: str):
         """Prints the metrics for the given epoch and mode.
@@ -174,6 +223,8 @@ class Metrics:
 
             logging.info(f"\tiou:  {self.train_iou[epoch]:.4f}")
             logging.info(f"\tacc:  {self.train_acc[epoch]:.4f}")
+            logging.info(f"\tf1:   {self.train_f1[epoch]:.4f}")
+
         elif mode == "eval":
             logging.info(f"\tloss: {self.val_loss[epoch]:.4f}")
             logging.info(f"\tbce:  {self.val_bce[epoch]:.4f}")
@@ -182,8 +233,51 @@ class Metrics:
 
             logging.info(f"\tiou:  {self.val_iou[epoch]:.4f}")
             logging.info(f"\tacc:  {self.val_acc[epoch]:.4f}")
+            logging.info(f"\tf1:   {self.val_f1[epoch]:.4f}")
 
         logging.info("-" * 30)
+
+    def log_to_wandb(self, epoch: int, mode: str):
+        """Logs the metrics to wandb.
+
+        Args:
+            epoch (int): The current epoch.
+            mode (str): The current mode, either "train" or "eval".
+        """
+        if epoch > len(self.train_loss) - 1 and mode == "train":
+            raise ValueError(f"Epoch {epoch} is out of range")
+        elif epoch > len(self.val_loss) - 1 and mode == "eval":
+            raise ValueError(f"Epoch {epoch} is out of range")
+
+        if mode not in ["train", "eval"]:
+            raise ValueError(f"Unknown mode {mode}")
+
+        if mode == "train":
+            wandb.log(
+                {
+                    "train_loss": self.train_loss[epoch],
+                    "train_bce": self.train_bce[epoch],
+                    "train_miou": self.train_miou[epoch],
+                    "train_mse": self.train_mse[epoch],
+                    "train_iou": self.train_iou[epoch],
+                    "train_acc": self.train_acc[epoch],
+                    "train_f1": self.train_f1[epoch],
+                },
+                step=epoch,
+            )
+        elif mode == "eval":
+            wandb.log(
+                {
+                    "val_loss": self.val_loss[epoch],
+                    "val_bce": self.val_bce[epoch],
+                    "val_miou": self.val_miou[epoch],
+                    "val_mse": self.val_mse[epoch],
+                    "val_iou": self.val_iou[epoch],
+                    "val_acc": self.val_acc[epoch],
+                    "val_f1": self.val_f1[epoch],
+                },
+                step=epoch,
+            )
 
     def save_metrics(self, filename: str):
         """Saves the metrics to a file.
@@ -198,12 +292,14 @@ class Metrics:
             "train_mse": self.train_mse,
             "train_iou": self.train_iou,
             "train_acc": self.train_acc,
+            "train_f1": self.train_f1,
             "val_loss": self.val_loss,
             "val_bce": self.val_bce,
             "val_miou": self.val_miou,
             "val_mse": self.val_mse,
             "val_iou": self.val_iou,
             "val_acc": self.val_acc,
+            "val_f1": self.val_f1,
         }
 
         with open(filename, "w") as f:
@@ -232,18 +328,19 @@ class Metrics:
         ax[0, 2].set_xlabel("Epoch")
         ax[0, 2].set_ylabel("BCE")
 
-        ax[1, 0].plot(self.train_mse, label="train")
-        ax[1, 0].plot(self.val_mse, label="val")
-        ax[1, 0].set_title("MSE")
+        ax[1, 0].plot(self.train_acc, label="train")
+        ax[1, 0].plot(self.val_acc, label="val")
+        ax[1, 0].set_title("Accuracy")
+        ax[1, 0].legend()
         ax[1, 0].set_xlabel("Epoch")
-        ax[1, 0].set_ylabel("MSE")
+        ax[1, 0].set_ylabel("Accuracy")
 
-        ax[1, 1].plot(self.train_acc, label="train")
-        ax[1, 1].plot(self.val_acc, label="val")
-        ax[1, 1].set_title("Accuracy")
+        ax[1, 1].plot(self.train_f1, label="train")
+        ax[1, 1].plot(self.val_f1, label="val")
+        ax[1, 1].set_title("Patch F1")
         ax[1, 1].legend()
         ax[1, 1].set_xlabel("Epoch")
-        ax[1, 1].set_ylabel("Accuracy")
+        ax[1, 1].set_ylabel("F1")
 
         ax[1, 2].plot(self.train_iou, label="train")
         ax[1, 2].plot(self.val_iou, label="val")

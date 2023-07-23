@@ -2,7 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
+from torchvision.ops import sigmoid_focal_loss
 
+import numpy as np
 
 def normalize_weights(weights: torch.tensor) -> torch.tensor:
     """Normalize weights to [0, 1] along the batch dimension.
@@ -80,10 +82,11 @@ class mIoULoss(nn.Module):
 
 
 class CustomBCELoss(nn.Module):
-    def __init__(self, args):
+    def __init__(self, args, size_average=True):
         super(CustomBCELoss, self).__init__()
         self.bce_fn = nn.BCELoss(reduction="none")
         self.alpha = args.edge_weight
+        self.size_average = size_average
 
     def forward(
         self, inputs: torch.tensor, targets: torch.tensor, weights: torch.tensor
@@ -99,9 +102,8 @@ class CustomBCELoss(nn.Module):
             torch.tensor: Weighted binary cross entropy loss.
         """
         loss = self.bce_fn(inputs, targets)
-        weight = normalize_weights(weights)
-        w = (1 - self.alpha) + self.alpha * weight
-        return torch.mean(w * loss)
+        # w = (1 - self.alpha) + self.alpha * weights
+        return torch.mean(weights * loss) if self.size_average else torch.sum(weights * loss)
 
 
 class CustomMSELoss(nn.Module):
@@ -124,9 +126,24 @@ class CustomMSELoss(nn.Module):
             torch.tensor: Weighted mean squared error loss.
         """
         loss = self.mse_fn(inputs, targets)
-        weight = normalize_weights(weights)
-        w = (1 - self.alpha) + self.alpha * weight
-        return torch.mean(w * loss)
+        # weight = normalize_weights(weights)
+        # w = (1 - self.alpha) + self.alpha * weight
+        return torch.mean(weights * loss)
+
+
+class FocalLoss(nn.Module):
+    def __inti__(self, args, gamma=2, alpha=0.5, size_average=True):
+        super(FocalLoss, self).__init__()
+        self.bce_fn = CustomBCELoss(args, size_average=False)
+        self.gamma = gamma
+        self.alpha = alpha
+        self.size_average = size_average
+
+    def forward(self, inputs, targets, weights):
+        bce = self.bce_fn(inputs, targets, weights)
+        pt = torch.exp(-bce)
+        focal_loss = self.alpha * (1 - pt) ** self.gamma * bce
+        return focal_loss.mean() if self.size_average else focal_loss.sum()
 
 
 class Criterion(nn.Module):
@@ -135,10 +152,43 @@ class Criterion(nn.Module):
         self.bce_fn = CustomBCELoss(args)
         self.mse_fn = CustomMSELoss(args)
         self.mIoU_fn = mIoULoss()
+        self.focal_fn = sigmoid_focal_loss
+
+        self.args = args
 
     def forward(self, inputs, targets, weights):
-        mio_loss = self.mIoU_fn(inputs, targets)
-        bce_loss = self.bce_fn(inputs, targets, weights)
-        mse_loss = self.mse_fn(inputs, targets, weights)
+        miou_loss = self.mIoU_fn(inputs, targets) * self.args.miou_weight
+        bce_loss = self.bce_fn(inputs, targets, weights) * self.args.bce_weight
+        mse_loss = self.mse_fn(inputs, targets, weights) * self.args.mse_weight
+        focal_loss = self.focal_fn(inputs, targets, reduction="mean") * self.args.focal_weight
 
-        return bce_loss + mio_loss  # + mse_loss
+        return miou_loss + bce_loss + mse_loss + focal_loss
+    
+def GapLoss_weights(pred_mask, k = 2, to_plot=False):
+    from skimage.morphology import skeletonize
+    skeletons = torch.zeros_like(pred_mask)
+    #convert to binary
+    pred_mask_copy = pred_mask.clone().detach().cpu().numpy()
+    pred_mask_copy[pred_mask_copy > 0.5] = 1
+    pred_mask_copy = pred_mask_copy.astype(np.uint8)
+    
+    for i in range(pred_mask.shape[0]):
+        skeleton = skeletonize(pred_mask_copy[i])
+        skeletons[i] = torch.from_numpy(skeleton).to(dtype=torch.float, device=pred_mask.device)
+    
+    kernel_3x3 = torch.ones(size=(1, 1, 3, 3)).to(pred_mask.device)
+    kernel_3x3[0, 0, 1, 1] = 0  
+    C = torch.conv2d(skeletons.unsqueeze(1), weight=kernel_3x3, padding=1)
+    C = (C == 1).float()
+    
+    kernel_9x9 = torch.ones(size=(1, 1, 9, 9)).to(pred_mask.device)
+    #for c consider only pixels that belong to the skeleton
+    C = C * skeletons.unsqueeze(1)
+    W = torch.conv2d(C, kernel_9x9, padding=4).squeeze(1)
+    W = W * k + torch.ones_like(W)
+    
+    if to_plot:
+        return C.detach().cpu().numpy(), W.detach().cpu().numpy(), skeletons.detach().cpu().numpy()
+    
+    return W
+    

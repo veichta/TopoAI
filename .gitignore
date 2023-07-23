@@ -1,8 +1,5 @@
 # Folders
-data.nosync/raw/*
-data.nosync/processed/*
-data.nosync/model_checkpoints/*
-data.nosync/model_output/*
+data/**
 plots/**
 logs/**
 
@@ -143,5 +140,4 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# vscode
-.vscode/launch.json
+data.nosync/*

@@ -16,17 +16,32 @@ def main():
     args = get_args()
     setup(args)
 
+    # get model and criterion
+    chs = [3] + [2 ** (i + args.width) for i in range(args.depth)]
     if args.model == ModelsEnum.UNET.value:
         from src.models.base_unet import BaseUNet, eval, load_model, train_one_epoch
 
-        model = BaseUNet()
+        model = BaseUNet(chs)
         model = load_model(model=model, args=args)
         model.to(args.device)
+        criterion = Criterion(args)
 
     elif args.model == ModelsEnum.UNETPP.value:
         from src.models.unet_pp import UNetPlus, eval, load_model, train_one_epoch
 
-        model = UNetPlus()
+        model = UNetPlus(chs)
+        model = load_model(model=model, args=args)
+        model.to(args.device)
+        criterion = Criterion(args)
+
+    elif args.model == ModelsEnum.SPIN.value:
+        from src.models.hr_spin import HRSPIN, SPINCriterion, eval, load_model, train_one_epoch
+
+        loss_fn = Criterion(args).to(args.device)
+        criterion = SPINCriterion(loss_fn=loss_fn, args=args)
+
+        model = HRSPIN(num_stacks=args.num_stacks)
+        model = load_model(model=model, args=args)
         model.to(args.device)
 
     logging.info(f"Number of trainable parameters: {model.n_trainable_params / 1e6:.2f} M")
@@ -35,11 +50,13 @@ def main():
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode="min", factor=0.1, patience=5, verbose=True
+        optimizer, mode="min", factor=0.1, patience=args.patience, verbose=True
     )
+    # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+    #     optimizer, args.epochs // 5, args.lr / 10
+    # )
 
-    criterion = Criterion(args)
-    metrics = Metrics(criterion)
+    metrics = Metrics(Criterion(args).to(args.device))
 
     if args.eval:
         eval(
@@ -50,7 +67,7 @@ def main():
             args=args,
         )
 
-        val_dl.dataset.plot_predictions(model, filename=os.path.join(args.log_dir, "eval.png"))
+        val_dl.dataset.plot_predictions(model, filename=os.path.join(args.log_dir, "eval.png"), plot_Gaploss=args.gaploss_weight > 0,)
         metrics.save_metrics(os.path.join(args.log_dir, "metrics.json"))
         return
 
@@ -67,14 +84,18 @@ def main():
         eval(
             model=model,
             val_dl=val_dl,
+            criterion=criterion,
             metrics=metrics,
             epoch=epoch,
             args=args,
         )
         scheduler.step(metrics.val_loss[-1])
+        # scheduler.step()
 
         # log metrics
-        val_dl.dataset.plot_predictions(model, filename=os.path.join(args.log_dir, "eval.png"))
+        if epoch % 5 == 0:
+            val_dl.dataset.plot_predictions(model, filename=os.path.join(args.log_dir, "eval.png"))
+
         metrics.plot_metrics(os.path.join(args.log_dir, "metrics.png"))
         metrics.save_metrics(os.path.join(args.log_dir, "metrics.json"))
 
@@ -82,9 +103,12 @@ def main():
         if metrics.val_loss[-1] == np.min(metrics.val_loss):
             torch.save(model.state_dict(), os.path.join(args.log_dir, "best_model.pt"))
 
-    best_epoch = np.argmax(metrics.val_acc)
+    best_epoch = np.argmax(metrics.val_f1)
     logging.info(f"Best epoch: {best_epoch + 1}")
     metrics.print_metrics(best_epoch, "eval")
+
+    if args.wandb:
+        metrics.log_to_wandb(best_epoch, "eval")
 
     # load best model
     model.load_state_dict(torch.load(os.path.join(args.log_dir, "best_model.pt")))

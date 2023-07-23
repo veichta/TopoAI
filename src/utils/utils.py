@@ -7,8 +7,8 @@ import time
 
 import numpy as np
 import torch
-
 import wandb
+
 from src.utils.enums import DatasetEnum, ModelsEnum
 
 
@@ -73,7 +73,7 @@ def get_args() -> argparse.Namespace:
     parser.add_argument(
         "--num_workers",
         type=int,
-        default=1,
+        default=0,
         help="Number of workers for dataloader",
     )
 
@@ -90,6 +90,24 @@ def get_args() -> argparse.Namespace:
         choices=[e.value for e in ModelsEnum],
         default=ModelsEnum.UNET.value,
         help="Model to use",
+    )
+    parser.add_argument(
+        "--depth",
+        type=int,
+        default=5,
+        help="Depth of UNet",
+    )
+    parser.add_argument(
+        "--width",
+        type=int,
+        default=5,
+        help="Width of UNet i.e. number of channels in first layer (2^width)",
+    )
+    parser.add_argument(
+        "--num_stacks",
+        type=int,
+        default=2,
+        help="Number of stacks in SPIN",
     )
 
     # TRAINING
@@ -122,23 +140,76 @@ def get_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
-        "--edge_weight",
-        type=float,
-        default=0.01,
-        help="Weight for edges in loss",
-    )
-
-    parser.add_argument(
         "--batches_per_epoch",
         type=int,
         help="Number of batches per training epoch",
     )
 
+    parser.add_argument(
+        "--patience",
+        type=int,
+        default=20,
+        help="Patience for lr scheduler",
+    )
+
+    # LOSS
+    parser.add_argument(
+        "--miou_weight",
+        type=float,
+        default=1.0,
+        help="Weight for miou loss",
+    )
+    parser.add_argument(
+        "--bce_weight",
+        type=float,
+        default=1.0,
+        help="Weight for cross entropy loss",
+    )
+    parser.add_argument(
+        "--mse_weight",
+        type=float,
+        default=1.0,
+        help="Weight for mse loss",
+    )
+    parser.add_argument(
+        "--focal_weight",
+        type=float,
+        default=1.0,
+        help="Weight for focal loss",
+    )
+    parser.add_argument(
+        "--vec_weight",
+        type=float,
+        default=0.1,
+        help="Weight for vector loss",
+    )
+    
+    # LOSS WEIGHTS
+    parser.add_argument(
+        "--edge_weight",
+        type=float,
+        default=0,
+        help="Weight for edges in loss",
+    )
+    
+    parser.add_argument(
+        "--gaploss_weight",
+        type=float,
+        default=0,
+        help="Weight for GAPLOSS in loss (denotes as k in the paper)",
+    )
     # LOGGING
     parser.add_argument(
         "--wandb",
         action="store_true",
         help="Use wandb for logging",
+    )
+
+    parser.add_argument(
+        "--wandb_dir",
+        type=str,
+        default="wandb",
+        help="Wandb directory",
     )
 
     parser.add_argument(
@@ -167,7 +238,9 @@ def setup(args: argparse.Namespace):
     if args.wandb:
         wandb.init(
             project="DiffusionRoads",
+            entity="diffusion-roads",
             config=vars(get_args()),
+            dir=args.wandb_dir,
         )
 
     # log dir
@@ -190,6 +263,9 @@ def setup(args: argparse.Namespace):
     with open(os.path.join(args.log_dir, "config.json"), "w") as f:
         json.dump(vars(args), f, indent=4)
 
+
+    #either use edge weights or GAPLOSS weights
+    assert not (args.edge_weight > 0 and args.gaploss_weight > 0)
 
 def cleanup(args: argparse.Namespace):
     """Clean up the environment."""
