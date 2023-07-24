@@ -73,7 +73,7 @@ def get_args() -> argparse.Namespace:
     parser.add_argument(
         "--num_workers",
         type=int,
-        default=0,
+        default=8,
         help="Number of workers for dataloader",
     )
 
@@ -189,14 +189,14 @@ def get_args() -> argparse.Namespace:
         "--edge_weight",
         type=float,
         default=0,
-        help="Weight for edges in loss",
+        help="Weight for edges in loss (should be in [0,1)!)",
     )
     
     parser.add_argument(
         "--gaploss_weight",
         type=float,
         default=0,
-        help="Weight for GAPLOSS in loss (denotes as k in the paper)",
+        help="Weight for GAPLOSS in loss (should be in [0,1)!)",
     )
 
     # SOFT CL DICE 
@@ -295,7 +295,7 @@ def setup(args: argparse.Namespace):
 
 
     #either use edge weights or GAPLOSS weights
-    assert not (args.edge_weight > 0 and args.gaploss_weight > 0)
+    # assert not (args.edge_weight > 0 and args.gaploss_weight > 0)
 
 def cleanup(args: argparse.Namespace):
     """Clean up the environment."""
