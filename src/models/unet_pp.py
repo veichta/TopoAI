@@ -7,7 +7,7 @@ import torch.nn as nn
 from tqdm import tqdm
 
 from src.metrics import Metrics
-from src.losses import normalize_weights, GapLoss_weights
+from src.losses import calculate_weights
 
 
 class Block(nn.Module):
@@ -187,13 +187,7 @@ def eval(
             
             out = model(img)
             
-            if args.edge_weight > 0:
-                weight = normalize_weights(weight.to(args.device))
-                weight = (1 - args.edge_weight) + args.edge_weight * weight
-            elif args.gaploss_weight > 0:
-                weight = GapLoss_weights(out, args.gaploss_weight)
-            else:
-                weight = torch.ones_like(mask).to(args.device)
+            weight = calculate_weights(out, weight, args)
 
             metrics.update(out, mask, weight)
 
@@ -241,13 +235,9 @@ def train_one_epoch(
         mask = mask.to(args.device)
 
         out = model(img)
-        if args.edge_weight > 0:
-            weight = normalize_weights(weight.to(args.device))
-            weight = (1 - args.edge_weight) + args.edge_weight * weight
-        elif args.gaploss_weight > 0:
-            weight = GapLoss_weights(out, args.gaploss_weight)
-        else:
-            weight = torch.ones_like(mask).to(args.device)
+        
+        weight = calculate_weights(out, weight, args)
+        
         loss = criterion(out, mask, weight)
 
         metrics.update(out, mask, weight)

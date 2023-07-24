@@ -189,14 +189,21 @@ def get_args() -> argparse.Namespace:
         "--edge_weight",
         type=float,
         default=0,
-        help="Weight for edges in loss",
+        help="Weight for edges in loss (should be in [0,1)!)",
     )
     
     parser.add_argument(
         "--gaploss_weight",
         type=float,
         default=0,
-        help="Weight for GAPLOSS in loss (denotes as k in the paper)",
+        help="Weight for GAPLOSS in loss (should be in [0,1)!)",
+    )
+    
+    parser.add_argument(
+        "--gaploss_k",
+        type=float,
+        default=2,
+        help="Hyperparameter for GapLoss"
     )
     # LOGGING
     parser.add_argument(
@@ -265,7 +272,7 @@ def setup(args: argparse.Namespace):
 
 
     #either use edge weights or GAPLOSS weights
-    assert not (args.edge_weight > 0 and args.gaploss_weight > 0)
+    # assert not (args.edge_weight > 0 and args.gaploss_weight > 0)
 
 def cleanup(args: argparse.Namespace):
     """Clean up the environment."""
