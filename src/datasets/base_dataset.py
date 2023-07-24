@@ -253,7 +253,7 @@ def get_splits(datasets: List[str], args: argparse.Namespace):
             image
             for image in train_images
             if any(dataset in image.split("/")[-1] for dataset in datasets) \
-                and "104_cil" not in image.split("/")[-1] \ 
+                and "104_cil" not in image.split("/")[-1] \
                 and "80_cil" not in image.split("/")[-1]
             # removing outliers
         ]
