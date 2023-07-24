@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import wandb
+from skimage.morphology import skeletonize, skeletonize_3d
 
 from src.losses import Criterion
 
@@ -91,6 +92,40 @@ def iou_fn(inputs: torch.tensor, target: torch.tensor) -> torch.tensor:
     union = inputs.sum() + target.sum() - intersection
     return (intersection + 1e-8) / (union + 1e-8)
 
+def cl_score(v, s):
+    """[this function computes the skeleton volume overlap]
+
+    Args:
+        v ([bool]): [image]
+        s ([bool]): [skeleton]
+
+    Returns:
+        [float]: [computed skeleton volume intersection]
+    """
+    return np.sum(v*s)/np.sum(s)
+
+
+def clDice_fn(v_p, v_l):
+    """[this function computes the cldice metric]
+
+    Args:
+        v_p ([bool]): [predicted image]
+        v_l ([bool]): [ground truth image]
+
+    Returns:
+        [float]: [cldice metric]
+    """
+    v_l = v_l.clone().detach().cpu().numpy()
+    v_p = v_p.clone().detach().cpu().numpy()
+    v_p[v_p > 0.5] = 1
+    v_p = v_p.astype(np.uint8)
+    print(np.sum(v_p))
+    cl_dice = []
+    for i in range(v_p.shape[0]):
+        tprec = cl_score(v_p[i],skeletonize(v_l[i]))
+        tsens = cl_score(v_l[i],skeletonize(v_p[i]))
+        cl_dice.append(2*tprec*tsens/(tprec+tsens))
+    return np.array(cl_dice).mean()
 
 class Metrics:
     def __init__(self, loss_fn: Criterion):
@@ -98,6 +133,7 @@ class Metrics:
         self.iou_fn = iou_fn
         self.acc_fn = accuracy_fn
         self.f1_fn = patch_f1
+        self.cl_dice_fn = clDice_fn
 
         self.train_loss = []
         self.train_bce = []
@@ -107,6 +143,7 @@ class Metrics:
         self.train_iou = []
         self.train_acc = []
         self.train_f1 = []
+        self.train_cl_dice = []
 
         self.val_loss = []
         self.val_bce = []
@@ -116,6 +153,7 @@ class Metrics:
         self.val_iou = []
         self.val_acc = []
         self.val_f1 = []
+        self.val_cl_dice = []
 
     def start_epoch(self):
         """Starts a new epoch by resetting the metrics."""
@@ -127,7 +165,7 @@ class Metrics:
         self.epoch_iou = []
         self.epoch_acc = []
         self.epoch_f1 = []
-
+        self.epoch_cl_dice = []
     def update(
         self,
         pred: torch.tensor,
@@ -153,6 +191,7 @@ class Metrics:
         iou = self.iou_fn(pred, target)
         acc = self.acc_fn(pred, target)
         f1 = self.f1_fn(pred, target)
+        cl_dice = self.cl_dice_fn(pred, target)
 
         self.epoch_loss.append(loss.item())
         self.epoch_bce.append(bce.item())
@@ -162,6 +201,7 @@ class Metrics:
         self.epoch_iou.append(iou.item())
         self.epoch_acc.append(acc.item())
         self.epoch_f1.append(f1.item())
+        self.epoch_cl_dice.append(cl_dice.item())
 
     def end_epoch(self, epoch: int, mode: str, log_wandb: bool = False):
         """Ends the current epoch by computing the mean of the metrics and printing them.
@@ -179,6 +219,7 @@ class Metrics:
             self.train_iou.append(np.mean(self.epoch_iou))
             self.train_acc.append(np.mean(self.epoch_acc))
             self.train_f1.append(np.mean(self.epoch_f1))
+            self.train_cl_dice.append(np.mean(self.epoch_cl_dice))
 
         elif mode == "eval":
             self.val_loss.append(np.mean(self.epoch_loss))
@@ -189,6 +230,7 @@ class Metrics:
             self.val_iou.append(np.mean(self.epoch_iou))
             self.val_acc.append(np.mean(self.epoch_acc))
             self.val_f1.append(np.mean(self.epoch_f1))
+            self.val_cl_dice.append(np.mean(self.epoch_cl_dice))
 
         else:
             raise ValueError(f"Unknown mode {mode}")
@@ -224,6 +266,7 @@ class Metrics:
             logging.info(f"\tiou:  {self.train_iou[epoch]:.4f}")
             logging.info(f"\tacc:  {self.train_acc[epoch]:.4f}")
             logging.info(f"\tf1:   {self.train_f1[epoch]:.4f}")
+            logging.info(f"\tcl_dice:   {self.train_cl_dice[epoch]:.4f}")
 
         elif mode == "eval":
             logging.info(f"\tloss: {self.val_loss[epoch]:.4f}")
@@ -234,6 +277,7 @@ class Metrics:
             logging.info(f"\tiou:  {self.val_iou[epoch]:.4f}")
             logging.info(f"\tacc:  {self.val_acc[epoch]:.4f}")
             logging.info(f"\tf1:   {self.val_f1[epoch]:.4f}")
+            logging.info(f"\tcl_dice:   {self.val_cl_dice[epoch]:.4f}")
 
         logging.info("-" * 30)
 
@@ -262,6 +306,7 @@ class Metrics:
                     "train_iou": self.train_iou[epoch],
                     "train_acc": self.train_acc[epoch],
                     "train_f1": self.train_f1[epoch],
+                    "train_cl_dice": self.train_cl_dice[epoch],
                 },
                 step=epoch,
             )
@@ -275,6 +320,7 @@ class Metrics:
                     "val_iou": self.val_iou[epoch],
                     "val_acc": self.val_acc[epoch],
                     "val_f1": self.val_f1[epoch],
+                    "val_cl_dice": self.val_cl_dice[epoch],
                 },
                 step=epoch,
             )
@@ -293,6 +339,7 @@ class Metrics:
             "train_iou": self.train_iou,
             "train_acc": self.train_acc,
             "train_f1": self.train_f1,
+            "train_cl_dice": self.train_cl_dice,
             "val_loss": self.val_loss,
             "val_bce": self.val_bce,
             "val_miou": self.val_miou,
@@ -300,6 +347,7 @@ class Metrics:
             "val_iou": self.val_iou,
             "val_acc": self.val_acc,
             "val_f1": self.val_f1,
+            "val_cl_dice": self.val_cl_dice,
         }
 
         with open(filename, "w") as f:

@@ -1,10 +1,12 @@
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from torchvision.ops import sigmoid_focal_loss
 
-import numpy as np
+from .utils.soft_skeleton import soft_skel
+
 
 def normalize_weights(weights: torch.tensor) -> torch.tensor:
     """Normalize weights to [0, 1] along the batch dimension.
@@ -153,6 +155,7 @@ class Criterion(nn.Module):
         self.mse_fn = CustomMSELoss(args)
         self.mIoU_fn = mIoULoss()
         self.focal_fn = sigmoid_focal_loss
+        self.soft_dice_cldice_fn = soft_dice_cldice(args)
 
         self.args = args
 
@@ -161,8 +164,9 @@ class Criterion(nn.Module):
         bce_loss = self.bce_fn(inputs, targets, weights) * self.args.bce_weight
         mse_loss = self.mse_fn(inputs, targets, weights) * self.args.mse_weight
         focal_loss = self.focal_fn(inputs, targets, reduction="mean") * self.args.focal_weight
+        cl_dice_loss = self.soft_dice_cldice_fn(inputs, targets) * self.args.cl_dice_weight
 
-        return miou_loss + bce_loss + mse_loss + focal_loss
+        return miou_loss + bce_loss + mse_loss + focal_loss + cl_dice_loss
     
 def GapLoss_weights(pred_mask, k = 2, to_plot=False):
     from skimage.morphology import skeletonize
@@ -191,4 +195,50 @@ def GapLoss_weights(pred_mask, k = 2, to_plot=False):
         return C.detach().cpu().numpy(), W.detach().cpu().numpy(), skeletons.detach().cpu().numpy()
     
     return W
+
+def soft_dice(y_true, y_pred):
+    """[function to compute dice loss]
+
+    Args:
+        y_true ([float32]): [ground truth image]
+        y_pred ([float32]): [predicted image]
+
+    Returns:
+        [float32]: [loss value]
+    """
+    smooth = 1
+    intersection = torch.sum((y_true * y_pred), dim=(1, 2, 3))
+    coeff = (2. *  intersection + smooth) / (torch.sum(y_true, dim=(1, 2, 3)) + torch.sum(y_pred, dim=(1, 2, 3)) + smooth)
+    return (1. - coeff)
+
+
+class soft_dice_cldice(nn.Module):
+    def __init__(self, args):
+        super(soft_dice_cldice, self).__init__()
+        self.iter = args.soft_skeleton_iter
+        self.smooth = args.smoothing
+        self.alpha = args.alpha
+        self.args = args
+
+    def forward(self, y_pred, y_true):
+        """[function to compute combined soft dice, soft cl dice loss]
+
+        Args:
+            y_true ([float32]): [ground truth image]
+            y_pred ([float32]): [predicted image]
+
+        Returns:
+            [float32]: [loss value]
+        """
+        y_pred = torch.where(y_pred > 0.5, torch.tensor(1., device=self.args.device), torch.tensor(0., device=self.args.device))
+        y_pred = y_pred.unsqueeze(1)
+        y_true = y_true.unsqueeze(1)
+        dice = soft_dice(y_true, y_pred)
+        skel_pred = soft_skel(y_pred, self.iter)
+        skel_true = soft_skel(y_true, self.iter)
+        tprec = (torch.sum(torch.multiply(skel_pred, y_true), dim=(1, 2, 3))+self.smooth)/(torch.sum(skel_pred, dim=(1, 2, 3))+self.smooth)    
+        tsens = (torch.sum(torch.multiply(skel_true, y_pred), dim=(1, 2, 3))+self.smooth)/(torch.sum(skel_true, dim=(1, 2, 3))+self.smooth)    
+        cl_dice = 1.- 2.0*(tprec*tsens)/(tprec+tsens)
+        return torch.sum((1.0-self.alpha)*dice+self.alpha*cl_dice)
+
     

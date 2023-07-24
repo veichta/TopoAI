@@ -46,13 +46,26 @@
             "justMyCode": true,
             "args": [
                 "--data_path",
-                "data/processed",
+                "~/Documents/ETH/CIL/Project/data/data.nosync/processed/",
                 "--epochs",
-                "1",
+                "100",
                 "--model",
                 "unet++",
                 "--batches_per_epoch",
-                "2"
+                "2",
+                "--device",
+                "cuda",
+                "--log_dir",
+                "logs",
+                "--lr",
+                "0.001",
+                "--patience",
+                "40",
+                "--batch_size",
+                "4",
+                "--wandb",
+                "--wandb_dir",
+                "~/Documents/ETH/CIL/Project/wandb/"
             ]
         }
     ]
