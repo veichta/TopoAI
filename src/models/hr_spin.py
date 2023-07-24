@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from tqdm import tqdm
 
+from src.losses import calculate_weights
 from src.metrics import Metrics
 from src.models.spin import spin
 
@@ -423,19 +424,21 @@ def train_one_epoch(
     batch_count = 0
     for img, mask, weight, vec in train_dl:
         img = img.to(args.device)
-
         mask = [m.to(args.device) for m in mask]
-        weight = [w.to(args.device) for w in weight]
         vec = [v.to(args.device) for v in vec]
 
         mask_pred, vec_pred = model(img)
-        loss = criterion(mask_pred, vec_pred, mask, vec, weight)
+        loss_weight = [calculate_weights(mask_pred[0], weight[0], args)]
+        for i in range(len(mask_pred) - 1):
+            loss_weight.append(calculate_weights(mask_pred[i + 1], weight[i], args))
+
+        loss = criterion(mask_pred, vec_pred, mask, vec, loss_weight)
 
         mask = mask[-1]
-        weight = weight[-1]
         mask_pred = mask_pred[-1]
+        loss_weight = loss_weight[-1]
 
-        metrics.update(mask_pred, mask, weight, loss)
+        metrics.update(mask_pred, mask, loss_weight, loss)
 
         optimizer.zero_grad()
         loss.backward()
@@ -484,17 +487,21 @@ def eval(
             img = img.to(args.device)
 
             mask = [m.to(args.device) for m in mask]
-            weight = [w.to(args.device) for w in weight]
+            # weight = [w.to(args.device) for w in weight]
             vec = [v.to(args.device) for v in vec]
 
             mask_pred, vec_pred = model(img)
-            loss = criterion(mask_pred, vec_pred, mask, vec, weight)
+
+            loss_weight = [calculate_weights(mask_pred[0], weight[0], args)]
+            for i in range(len(mask_pred) - 1):
+                loss_weight.append(calculate_weights(mask_pred[i + 1], weight[i], args))
+            loss = criterion(mask_pred, vec_pred, mask, vec, loss_weight)
 
             mask = mask[-1]
-            weight = weight[-1]
+            loss_weight = loss_weight[-1]
             mask_pred = mask_pred[-1]
 
-            metrics.update(mask_pred, mask, weight, loss)
+            metrics.update(mask_pred, mask, loss_weight, loss)
             pbar.set_postfix(
                 loss=np.mean(metrics.epoch_loss),
                 iou=np.mean(metrics.epoch_iou),

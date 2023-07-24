@@ -7,6 +7,7 @@ import torch.nn as nn
 from tqdm import tqdm
 
 from src.metrics import Metrics
+from src.losses import calculate_weights
 
 
 class Block(nn.Module):
@@ -183,9 +184,11 @@ def eval(
         for img, mask, weight in val_dl:
             img = img.to(args.device)
             mask = mask.to(args.device)
-            weight = weight.to(args.device)
-
+            
             out = model(img)
+            
+            weight = calculate_weights(out, weight, args)
+
             metrics.update(out, mask, weight)
 
             pbar.set_postfix(
@@ -230,9 +233,11 @@ def train_one_epoch(
     for img, mask, weight in train_dl:
         img = img.to(args.device)
         mask = mask.to(args.device)
-        weight = weight.to(args.device)
 
         out = model(img)
+        
+        weight = calculate_weights(out, weight, args)
+        
         loss = criterion(out, mask, weight)
 
         metrics.update(out, mask, weight)

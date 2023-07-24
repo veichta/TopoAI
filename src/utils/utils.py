@@ -140,13 +140,6 @@ def get_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
-        "--edge_weight",
-        type=float,
-        default=0,
-        help="Weight for edges in loss",
-    )
-
-    parser.add_argument(
         "--batches_per_epoch",
         type=int,
         help="Number of batches per training epoch",
@@ -190,7 +183,28 @@ def get_args() -> argparse.Namespace:
         default=0.1,
         help="Weight for vector loss",
     )
-
+    
+    # LOSS WEIGHTS
+    parser.add_argument(
+        "--edge_weight",
+        type=float,
+        default=0,
+        help="Weight for edges in loss (should be in [0,1)!)",
+    )
+    
+    parser.add_argument(
+        "--gaploss_weight",
+        type=float,
+        default=0,
+        help="Weight for GAPLOSS in loss (should be in [0,1)!)",
+    )
+    
+    parser.add_argument(
+        "--gaploss_k",
+        type=float,
+        default=2,
+        help="Hyperparameter for GapLoss"
+    )
     # LOGGING
     parser.add_argument(
         "--wandb",
@@ -256,6 +270,9 @@ def setup(args: argparse.Namespace):
     with open(os.path.join(args.log_dir, "config.json"), "w") as f:
         json.dump(vars(args), f, indent=4)
 
+
+    #either use edge weights or GAPLOSS weights
+    # assert not (args.edge_weight > 0 and args.gaploss_weight > 0)
 
 def cleanup(args: argparse.Namespace):
     """Clean up the environment."""
