@@ -8,10 +8,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from tqdm import tqdm
 
+from src.losses import calculate_weights
 from src.metrics import Metrics
 from src.models.spin import spin
-
-from src.losses import calculate_weights
 
 affine_par = True
 
@@ -430,9 +429,9 @@ def train_one_epoch(
 
         mask_pred, vec_pred = model(img)
         loss_weight = [calculate_weights(mask_pred[0], weight[0], args)]
-        for i in range(len(mask_pred)-1):
-            loss_weight.append(calculate_weights(mask_pred[i+1], weight[i], args))
-        
+        for i in range(len(mask_pred) - 1):
+            loss_weight.append(calculate_weights(mask_pred[i + 1], weight[i], args))
+
         loss = criterion(mask_pred, vec_pred, mask, vec, loss_weight)
 
         mask = mask[-1]
@@ -492,10 +491,10 @@ def eval(
             vec = [v.to(args.device) for v in vec]
 
             mask_pred, vec_pred = model(img)
-            
+
             loss_weight = [calculate_weights(mask_pred[0], weight[0], args)]
-            for i in range(len(mask_pred)-1):
-                loss_weight.append(calculate_weights(mask_pred[i+1], weight[i], args))
+            for i in range(len(mask_pred) - 1):
+                loss_weight.append(calculate_weights(mask_pred[i + 1], weight[i], args))
             loss = criterion(mask_pred, vec_pred, mask, vec, loss_weight)
 
             mask = mask[-1]
