@@ -252,17 +252,24 @@ def get_splits(datasets: List[str], args: argparse.Namespace):
         train_images = [
             image
             for image in train_images
-            if any(dataset in image.split("/")[-1] for dataset in datasets)
+            if any(dataset in image.split("/")[-1] for dataset in datasets) \
+                and "104_cil" not in image.split("/")[-1] \ 
+                and "80_cil" not in image.split("/")[-1]
+            # removing outliers
         ]
         train_masks = [
             mask
             for mask in train_masks
-            if any(dataset in mask.split("/")[-1] for dataset in datasets)
+            if any(dataset in mask.split("/")[-1] for dataset in datasets) \
+                and "104_cil" not in mask.split("/")[-1] \
+                and "80_cil" not in mask.split("/")[-1]
         ]
         train_weights = [
             weight
             for weight in train_weights
-            if any(dataset in weight.split("/")[-1] for dataset in datasets)
+            if any(dataset in weight.split("/")[-1] for dataset in datasets) \
+                and "104_cil" not in weight.split("/")[-1] \
+                and "80_cil" not in weight.split("/")[-1]
         ]
 
         val_images = [
