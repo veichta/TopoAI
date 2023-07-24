@@ -164,8 +164,9 @@ class Criterion(nn.Module):
 
         return miou_loss + bce_loss + mse_loss + focal_loss
     
-def GapLoss_weights(pred_mask, k = 2, corner_region = 4, to_plot=False):
+def GapLoss_weights(pred_mask, corner_region = 25, to_plot=False):
     from skimage.morphology import skeletonize
+    from torchvision.transforms import GaussianBlur    
     skeletons = torch.zeros_like(pred_mask)
     #convert to binary
     pred_mask_copy = pred_mask.clone().detach().cpu().numpy()
@@ -184,8 +185,13 @@ def GapLoss_weights(pred_mask, k = 2, corner_region = 4, to_plot=False):
     corner_kernel = torch.ones(size=(1, 1, corner_region*2 + 1, corner_region*2 + 1)).to(pred_mask.device)
     #for c consider only pixels that belong to the skeleton
     C = C * skeletons.unsqueeze(1)
-    W = torch.conv2d(C, corner_kernel, padding=corner_region).squeeze(1)
-    W = W * k + torch.ones_like(W)
+    # W = torch.conv2d(C, corner_kernel, padding=corner_region).squeeze(1)
+    
+    #use gaussian blur instead of discrete boundaries
+    gaussian_blur = GaussianBlur(kernel_size=corner_region*2 + 1, sigma=(corner_region / 10, corner_region))
+    W = gaussian_blur(C)
+    
+    W = W + torch.ones_like(W)
     
     if to_plot:
         return C.detach().cpu().numpy(), W.detach().cpu().numpy(), skeletons.detach().cpu().numpy()
@@ -202,10 +208,10 @@ def calculate_weights(pred, edge_weights, args):
         loss_weights += weight
         
     if args.gaploss_weight > 0:
-        weight = GapLoss_weights(pred, args.gaploss_weight)
+        weight = GapLoss_weights(pred)
         weight = normalize_weights(weight.to(args.device))
         weight = (1 - args.gaploss_weight) + args.gaploss_weight * weight
-        loss_weights += weight
+        loss_weights += weight.squeeze(1)
         
     if args.gaploss_weight == 0 and args.edge_weight == 0:
         loss_weights = torch.ones_like(pred).to(args.device)

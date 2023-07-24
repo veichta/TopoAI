@@ -199,12 +199,6 @@ def get_args() -> argparse.Namespace:
         help="Weight for GAPLOSS in loss (should be in [0,1)!)",
     )
     
-    parser.add_argument(
-        "--gaploss_k",
-        type=float,
-        default=2,
-        help="Hyperparameter for GapLoss"
-    )
     # LOGGING
     parser.add_argument(
         "--wandb",
