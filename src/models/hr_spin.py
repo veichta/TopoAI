@@ -422,6 +422,8 @@ def train_one_epoch(
     metrics.start_epoch()
     batch_count = 0
     for img, mask, weight, vec in train_dl:
+        img = img.to(args.device)
+
         mask = [m.to(args.device) for m in mask]
         weight = [w.to(args.device) for w in weight]
         vec = [v.to(args.device) for v in vec]

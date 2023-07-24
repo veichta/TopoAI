@@ -38,7 +38,7 @@ def main():
         from src.models.hr_spin import HRSPIN, SPINCriterion, eval, load_model, train_one_epoch
 
         loss_fn = Criterion(args).to(args.device)
-        criterion = SPINCriterion(loss_fn=loss_fn, args=args)
+        criterion = SPINCriterion(loss_fn=loss_fn, args=args).to(args.device)
 
         model = HRSPIN(num_stacks=args.num_stacks)
         model = load_model(model=model, args=args)
@@ -100,15 +100,18 @@ def main():
         metrics.save_metrics(os.path.join(args.log_dir, "metrics.json"))
 
         # save best model
-        if metrics.val_loss[-1] == np.min(metrics.val_loss):
+        if metrics.val_loss[-1] == np.min(metrics.val_acc):
             torch.save(model.state_dict(), os.path.join(args.log_dir, "best_model.pt"))
 
-    best_epoch = np.argmax(metrics.val_f1)
+    best_epoch = np.argmax(metrics.val_acc)
     logging.info(f"Best epoch: {best_epoch + 1}")
     metrics.print_metrics(best_epoch, "eval")
 
     if args.wandb:
         metrics.log_to_wandb(best_epoch, "eval")
+
+    # store last model
+    torch.save(model.state_dict(), os.path.join(args.log_dir, "best_model.pt"))
 
     # load best model
     model.load_state_dict(torch.load(os.path.join(args.log_dir, "best_model.pt")))

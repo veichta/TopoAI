@@ -1,0 +1,91 @@
+command:
+  - python
+  - ${program}
+  - ${args}
+  - --wandb
+method: bayes
+metric:
+  goal: minimize
+  name: val_acc
+parameters:
+  bce_weight:
+    distribution: uniform
+    max: 1
+    min: 0
+  data_path:
+    distribution: categorical
+    values:
+      - /cluster/scratch/veichta/cil/processed/
+  device:
+    distribution: categorical
+    values:
+      - cuda
+  edge_weight:
+    distribution: uniform
+    max: 0.99
+    min: 0
+  epochs:
+    distribution: categorical
+    values:
+      - 300
+  focal_weight:
+    distribution: uniform
+    max: 1
+    min: 0
+  log_dir:
+    distribution: categorical
+    values:
+      - /cluster/scratch/veichta/cil/logs
+  lr:
+    distribution: categorical
+    values:
+      - 0.1
+      - 0.01
+      - 0.001
+      - 0.0001
+      - 1e-05
+  miou_weight:
+    distribution: uniform
+    max: 1
+    min: 0
+  model:
+    distribution: categorical
+    values:
+      - unet++
+      - unet
+      - spin
+  width:
+    distribution: categorical
+    values:
+      - 4
+      - 5
+      - 6
+  patience:
+    distribution: categorical
+    values:
+      - 20
+      - 30
+      - 40
+      - 50
+      - 60
+  vec_weight:
+    distribution: uniform
+    max: 0.9
+    min: 0
+  mse_weight:
+    distribution: uniform
+    max: 1
+    min: 0
+  wandb_dir:
+    distribution: categorical
+    values:
+      - /cluster/scratch/veichta/wandb
+  weight_decay:
+    distribution: categorical
+    values:
+      - 0
+      - 1e-05
+      - 0.0001
+      - 0.001
+      - 0.01
+program: main.py
