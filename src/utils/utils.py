@@ -242,6 +242,13 @@ def get_args() -> argparse.Namespace:
         help="Number of bars to use for topological loss dimension 1",
     )
 
+    parser.add_argument(
+        "--topo_weight_v2",
+        type=float,
+        default=0.0,
+        help="Weight for topological loss",
+    )
+
     # LOGGING
     parser.add_argument(
         "--wandb",

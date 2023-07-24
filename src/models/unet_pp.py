@@ -237,7 +237,8 @@ def train_one_epoch(
         weight = calculate_weights(out, weight, args)
         
         loss = criterion(out, mask, weight)
-        topo_loss_avg += criterion.topo_loss.item() * img.shape[0]
+        if args.topo_weight > 0:
+            topo_loss_avg += criterion.topo_loss.item() * img.shape[0]
 
         metrics.update(out, mask, weight)
 

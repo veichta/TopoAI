@@ -197,6 +197,42 @@ class TopoGradLoss(nn.Module):
 
         return loss / inputs.shape[0]
     
+
+class TopoLoss(nn.Module):
+
+    def __init__(self, args):
+        super(TopoLoss, self).__init__()
+        # layer to compute the bars
+        self.layer = LevelSetLayer2D(size=(100,100), maxdim=1, sublevel=False)
+
+    def forward(self, inputs, targets):
+
+        loss = 0
+
+        # downsample to make loss computation faster
+        inputs = torch.unsqueeze(inputs, dim=1)
+        inputs = torch.nn.functional.interpolate(inputs, size=(100,100), mode='bicubic')
+        inputs = torch.squeeze(inputs, dim=1)
+
+        targets = torch.nn.functional.interpolate(targets, size=(100,100), mode='bicubic')
+        targets = torch.squeeze(targets, dim=1)
+
+        for i in range(inputs.shape[0]):
+            
+            # compute bars
+            input_bars, _ = self.layer(inputs[i])
+            target_bars, _ = self.layer(targets[i])
+
+            for k in range(2):
+
+                select = target_bars[k][:,0] - target_bars[k][:,1] > 0
+                input_bars_k = input_bars[k][select]
+                target_bars_k = target_bars[k][select]
+
+                loss += torch.sum((input_bars_k - target_bars_k)**2)
+
+        return loss / inputs.shape[0]
+    
     
 class Criterion(nn.Module):
     def __init__(self, args):
@@ -208,6 +244,7 @@ class Criterion(nn.Module):
         self.soft_dice_cldice_fn = soft_dice_cldice(args)
 
         self.topo_fn = TopoGradLoss(args)
+        self.topov2_fn = TopoLoss(args)
 
         self.args = args
 
