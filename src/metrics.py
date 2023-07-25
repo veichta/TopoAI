@@ -103,7 +103,7 @@ def cl_score(v, s):
     Returns:
         [float]: [computed skeleton volume intersection]
     """
-    return np.sum(v * s) / np.sum(s)
+    return np.sum(v * s) / (np.sum(s) + 1e-8)
 
 
 def clDice_fn(v_p, v_l):
@@ -120,12 +120,12 @@ def clDice_fn(v_p, v_l):
     v_p = v_p.clone().detach().cpu().numpy()
     v_p[v_p > 0.5] = 1
     v_p = v_p.astype(np.uint8)
-    print(np.sum(v_p))
+    # print(np.sum(v_p))
     cl_dice = []
     for i in range(v_p.shape[0]):
         tprec = cl_score(v_p[i], skeletonize(v_l[i]))
         tsens = cl_score(v_l[i], skeletonize(v_p[i]))
-        cl_dice.append(2 * tprec * tsens / (tprec + tsens))
+        cl_dice.append(2 * tprec * tsens / (tprec + tsens + 1e-8))
     return np.array(cl_dice).mean()
 
 
@@ -269,7 +269,7 @@ class Metrics:
             logging.info(f"\tiou:  {self.train_iou[epoch]:.4f}")
             logging.info(f"\tacc:  {self.train_acc[epoch]:.4f}")
             logging.info(f"\tf1:   {self.train_f1[epoch]:.4f}")
-            logging.info(f"\tcl_dice:   {self.train_cl_dice[epoch]:.4f}")
+            logging.info(f"\tcld:  {self.train_cl_dice[epoch]:.4f}")
 
         elif mode == "eval":
             logging.info(f"\tloss: {self.val_loss[epoch]:.4f}")
@@ -280,7 +280,7 @@ class Metrics:
             logging.info(f"\tiou:  {self.val_iou[epoch]:.4f}")
             logging.info(f"\tacc:  {self.val_acc[epoch]:.4f}")
             logging.info(f"\tf1:   {self.val_f1[epoch]:.4f}")
-            logging.info(f"\tcl_dice:   {self.val_cl_dice[epoch]:.4f}")
+            logging.info(f"\tcld:  {self.val_cl_dice[epoch]:.4f}")
 
         logging.info("-" * 30)
 

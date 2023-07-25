@@ -141,8 +141,7 @@ def main():
         model, filename=os.path.join(args.log_dir, "best_eval.png"), args=args
     )
     test_dl.dataset.plot_predictions(
-        model,
-        filename=os.path.join(args.log_dir, "best_test.png"),
+        model, filename=os.path.join(args.log_dir, "best_test.png"), args=args
     )
 
     # Eval best model on test set
