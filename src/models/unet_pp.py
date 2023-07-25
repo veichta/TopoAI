@@ -224,12 +224,10 @@ def train_one_epoch(
     """
     logging.info(f"Epoch {epoch + 1}/{args.epochs}")
     pbar = tqdm(train_dl, bar_format="{l_bar}{bar:20}{r_bar}{bar:-20b}")
-    if args.batches_per_epoch is not None:
-        pbar.total = args.batches_per_epoch
     pbar.set_description(f"Epoch {epoch + 1}/{args.epochs}")
     model.train()
     metrics.start_epoch()
-    batch_count = 0
+    topo_loss_avg = 0
     for img, mask, weight in train_dl:
         img = img.to(args.device)
         mask = mask.to(args.device)
@@ -239,6 +237,8 @@ def train_one_epoch(
         weight = calculate_weights(out, weight, args)
         
         loss = criterion(out, mask, weight)
+        if args.topo_weight > 0:
+            topo_loss_avg += criterion.topo_loss.item() * img.shape[0]
 
         metrics.update(out, mask, weight)
 
@@ -253,12 +253,10 @@ def train_one_epoch(
         )
         pbar.update()
 
-        batch_count += 1
-
-        if args.batches_per_epoch is not None and batch_count >= args.batches_per_epoch:
-            break
 
     pbar.close()
+    topo_loss_avg /= len(train_dl)
+    metrics.train_topo.append(topo_loss_avg)
     metrics.end_epoch(epoch=epoch, mode="train", log_wandb=args.wandb)
 
 

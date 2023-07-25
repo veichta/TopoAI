@@ -10,11 +10,7 @@
 #SBATCH --gpus=1
 #SBATCH --mail-type=NONE
 
-# default euler gpu runs out of memory if batch size is 8
-# can request higher memory gpu with --gres=gpumem:15G, but might result in longer waiting time
-
 module load gcc/8.2.0 python_gpu/3.10.4
-pip install albumentations
 
 python3.10 $HOME/DiffusionRoads/main.py \
     --device cuda \
@@ -27,7 +23,11 @@ python3.10 $HOME/DiffusionRoads/main.py \
     --batch_size 8 \
     --epochs 100 \
     --lr 3e-4 \
-    --log_dir $HOME/DiffusionRoads/logs \
+    --miou_weight 0.0 \
+    --bce_weight 1.0 \
+    --mse_weight 0.0 \
+    --focal_weight 0.0 \
+    --vec_weight 0.0 \
+    --topo_weight 0.1 \
+    --log_dir /cluster/scratch/$USER/logs \
     --log_to_file \
-    
-#--batches_per_epoch 2000

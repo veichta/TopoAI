@@ -140,12 +140,6 @@ def get_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
-        "--batches_per_epoch",
-        type=int,
-        help="Number of batches per training epoch",
-    )
-
-    parser.add_argument(
         "--patience",
         type=int,
         default=20,
@@ -226,6 +220,33 @@ def get_args() -> argparse.Namespace:
         type=float,
         default=1,
         help="weight of cl_dice loss",
+    )
+    parser.add_argument(
+        "--topo_weight",
+        type=float,
+        default=0.0,
+        help="Weight for topograd loss",
+    )
+
+    parser.add_argument(
+        "--topo_k0",
+        type=int,
+        default=3,
+        help="Number of bars to use for topological loss dimension 0",
+    )
+
+    parser.add_argument(
+        "--topo_k1",
+        type=int,
+        default=3,
+        help="Number of bars to use for topological loss dimension 1",
+    )
+
+    parser.add_argument(
+        "--batches_per_epoch",
+        type=int,
+        default=None,
+        help="Number of batches per epoch",
     )
 
     # LOGGING
