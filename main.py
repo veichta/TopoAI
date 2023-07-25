@@ -117,7 +117,7 @@ def main():
         metrics.log_to_wandb(best_epoch, "eval")
 
     # store last model
-    torch.save(model.state_dict(), os.path.join(args.log_dir, "best_model.pt"))
+    torch.save(model.state_dict(), os.path.join(args.log_dir, "last_model.pt"))
 
     # Eval last model on test set
     logging.info("TEST RESULTS (LAST MODEL)")
