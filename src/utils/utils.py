@@ -225,7 +225,7 @@ def get_args() -> argparse.Namespace:
         "--topo_weight",
         type=float,
         default=0.0,
-        help="Weight for topological loss",
+        help="Weight for topograd loss",
     )
 
     parser.add_argument(
@@ -243,10 +243,10 @@ def get_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
-        "--topo_weight_v2",
-        type=float,
-        default=0.0,
-        help="Weight for topological loss",
+        "--batches_per_epoch",
+        type=int,
+        default=None,
+        help="Number of batches per epoch",
     )
 
     # LOGGING
