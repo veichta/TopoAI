@@ -250,7 +250,7 @@ class soft_dice_cldice(nn.Module):
 
 def calculate_weights(pred, edge_weights, args):
     
-    loss_weights = torch.ones_like(edge_weights) * (1 - args.edge_weight - args.gaploss_weight)
+    loss_weights = torch.ones_like(edge_weights, device=pred.device) * (1 - args.edge_weight - args.gaploss_weight)
             
     if args.edge_weight > 0:
         weight = normalize_weights(edge_weights.to(args.device))
