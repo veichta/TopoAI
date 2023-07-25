@@ -294,8 +294,10 @@ def setup(args: argparse.Namespace):
         json.dump(vars(args), f, indent=4)
 
 
-    #either use edge weights or GAPLOSS weights
-    # assert not (args.edge_weight > 0 and args.gaploss_weight > 0)
+    # check loss weights
+    assert (args.edge_weight <= 1)
+    assert (args.gaploss_weight <= 1)
+    assert (args.edge_weight + args.gaploss_weight <= 1)
 
 def cleanup(args: argparse.Namespace):
     """Clean up the environment."""
