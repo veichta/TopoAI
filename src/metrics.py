@@ -4,9 +4,9 @@ import logging
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import wandb
 from skimage.morphology import skeletonize, skeletonize_3d
 
+import wandb
 from src.losses import Criterion
 
 PATCH_SIZE = 16  # pixels per side of square patches
@@ -92,6 +92,7 @@ def iou_fn(inputs: torch.tensor, target: torch.tensor) -> torch.tensor:
     union = inputs.sum() + target.sum() - intersection
     return (intersection + 1e-8) / (union + 1e-8)
 
+
 def cl_score(v, s):
     """[this function computes the skeleton volume overlap]
 
@@ -102,7 +103,7 @@ def cl_score(v, s):
     Returns:
         [float]: [computed skeleton volume intersection]
     """
-    return np.sum(v*s)/np.sum(s)
+    return np.sum(v * s) / (np.sum(s) + 1e-8)
 
 
 def clDice_fn(v_p, v_l):
@@ -119,13 +120,14 @@ def clDice_fn(v_p, v_l):
     v_p = v_p.clone().detach().cpu().numpy()
     v_p[v_p > 0.5] = 1
     v_p = v_p.astype(np.uint8)
-    print(np.sum(v_p))
+    # print(np.sum(v_p))
     cl_dice = []
     for i in range(v_p.shape[0]):
-        tprec = cl_score(v_p[i],skeletonize(v_l[i]))
-        tsens = cl_score(v_l[i],skeletonize(v_p[i]))
-        cl_dice.append(2*tprec*tsens/(tprec+tsens))
+        tprec = cl_score(v_p[i], skeletonize(v_l[i]))
+        tsens = cl_score(v_l[i], skeletonize(v_p[i]))
+        cl_dice.append(2 * tprec * tsens / (tprec + tsens + 1e-8))
     return np.array(cl_dice).mean()
+
 
 class Metrics:
     def __init__(self, loss_fn: Criterion):
@@ -166,6 +168,7 @@ class Metrics:
         self.epoch_acc = []
         self.epoch_f1 = []
         self.epoch_cl_dice = []
+
     def update(
         self,
         pred: torch.tensor,
@@ -266,7 +269,7 @@ class Metrics:
             logging.info(f"\tiou:  {self.train_iou[epoch]:.4f}")
             logging.info(f"\tacc:  {self.train_acc[epoch]:.4f}")
             logging.info(f"\tf1:   {self.train_f1[epoch]:.4f}")
-            logging.info(f"\tcl_dice:   {self.train_cl_dice[epoch]:.4f}")
+            logging.info(f"\tcld:  {self.train_cl_dice[epoch]:.4f}")
 
         elif mode == "eval":
             logging.info(f"\tloss: {self.val_loss[epoch]:.4f}")
@@ -277,7 +280,7 @@ class Metrics:
             logging.info(f"\tiou:  {self.val_iou[epoch]:.4f}")
             logging.info(f"\tacc:  {self.val_acc[epoch]:.4f}")
             logging.info(f"\tf1:   {self.val_f1[epoch]:.4f}")
-            logging.info(f"\tcl_dice:   {self.val_cl_dice[epoch]:.4f}")
+            logging.info(f"\tcld:  {self.val_cl_dice[epoch]:.4f}")
 
         logging.info("-" * 30)
 
@@ -293,7 +296,7 @@ class Metrics:
         elif epoch > len(self.val_loss) - 1 and mode == "eval":
             raise ValueError(f"Epoch {epoch} is out of range")
 
-        if mode not in ["train", "eval"]:
+        if mode not in ["train", "eval", "test"]:
             raise ValueError(f"Unknown mode {mode}")
 
         if mode == "train":
@@ -323,6 +326,18 @@ class Metrics:
                     "val_cl_dice": self.val_cl_dice[epoch],
                 },
                 step=epoch,
+            )
+        elif mode == "test":
+            wandb.log(
+                {
+                    "test_loss": self.val_loss[epoch],
+                    "test_bce": self.val_bce[epoch],
+                    "test_miou": self.val_miou[epoch],
+                    "test_mse": self.val_mse[epoch],
+                    "test_iou": self.val_iou[epoch],
+                    "test_acc": self.val_acc[epoch],
+                    "test_f1": self.val_f1[epoch],
+                }
             )
 
     def save_metrics(self, filename: str):

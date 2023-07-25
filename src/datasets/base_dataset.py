@@ -228,7 +228,8 @@ def get_splits(datasets: List[str], args: argparse.Namespace):
         datasets (List[str]): Datasets to use.
 
     Returns:
-        Tuple[torch.utils.data.Dataset, torch.utils.data.Dataset]: Train and validation datasets.
+        Tuple[torch.utils.data.Dataset, torch.utils.data.Dataset, torch.utils.data.Dataset]: Train,
+        validation and test datasets.
     """
 
     # images = list_dir(os.path.join(args.data_path, "images"))
@@ -242,6 +243,10 @@ def get_splits(datasets: List[str], args: argparse.Namespace):
     val_images = list_dir(os.path.join(args.data_path, "validation", "images"))
     val_masks = list_dir(os.path.join(args.data_path, "validation", "masks"))
     val_weights = list_dir(os.path.join(args.data_path, "validation", "weights"))
+
+    test_images = list_dir(os.path.join(args.data_path, "testing", "images"))
+    test_masks = list_dir(os.path.join(args.data_path, "testing", "masks"))
+    test_weights = list_dir(os.path.join(args.data_path, "testing", "weights"))
 
     if DatasetEnum.ALL.value not in datasets:
         train_images = [
@@ -276,13 +281,35 @@ def get_splits(datasets: List[str], args: argparse.Namespace):
             if any(dataset in weight.split("/")[-1] for dataset in datasets)
         ]
 
+        test_images = [
+            image
+            for image in test_images
+            if any(dataset in image.split("/")[-1] for dataset in datasets)
+        ]
+        test_masks = [
+            mask
+            for mask in test_masks
+            if any(dataset in mask.split("/")[-1] for dataset in datasets)
+        ]
+        test_weights = [
+            weight
+            for weight in test_weights
+            if any(dataset in weight.split("/")[-1] for dataset in datasets)
+        ]
+
     # val images only from cil dataset
     val_images = [image for image in val_images if "cil" in image.split("/")[-1]]
     val_masks = [mask for mask in val_masks if "cil" in mask.split("/")[-1]]
     val_weights = [weight for weight in val_weights if "cil" in weight.split("/")[-1]]
 
+    # test images only from cil dataset
+    test_images = [image for image in test_images if "cil" in image.split("/")[-1]]
+    test_masks = [mask for mask in test_masks if "cil" in mask.split("/")[-1]]
+    test_weights = [weight for weight in test_weights if "cil" in weight.split("/")[-1]]
+
     logging.info(f"Train images: {len(train_images)}")
     logging.info(f"Valid images: {len(val_images)}")
+    logging.info(f"Test images:  {len(test_images)}")
 
     train_dataset = BaseDataset(
         img_paths=sorted(train_images),
@@ -298,5 +325,16 @@ def get_splits(datasets: List[str], args: argparse.Namespace):
         args=args,
         split="val",
     )
+    test_dataset = BaseDataset(
+        img_paths=sorted(test_images),
+        mask_paths=sorted(test_masks),
+        weight_paths=sorted(test_weights),
+        args=args,
+        split="test",
+    )
 
-    return get_dataloader(train_dataset, args), get_dataloader(val_dataset, args, shuffle=False)
+    return (
+        get_dataloader(train_dataset, args),
+        get_dataloader(val_dataset, args, shuffle=False),
+        get_dataloader(test_dataset, args, shuffle=False),
+    )
