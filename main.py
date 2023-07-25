@@ -46,7 +46,7 @@ def main():
 
     logging.info(f"Number of trainable parameters: {model.n_trainable_params / 1e6:.2f} M")
 
-    train_dl, val_dl = get_splits(args.datasets, args)
+    train_dl, val_dl, test_dl = get_splits(args.datasets, args)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -117,10 +117,37 @@ def main():
     # store last model
     torch.save(model.state_dict(), os.path.join(args.log_dir, "best_model.pt"))
 
+    # Eval last model on test set
+    logging.info("TEST RESULTS (LAST MODEL)")
+    eval(
+        model=model,
+        val_dl=test_dl,
+        criterion=criterion,
+        metrics=metrics,
+        epoch=args.epochs,
+        args=args,
+    )
+    if args.wandb:
+        metrics.log_to_wandb(args.epochs, "test")
+
     # load best model
     model.load_state_dict(torch.load(os.path.join(args.log_dir, "best_model.pt")))
     train_dl.dataset.plot_predictions(model, filename=os.path.join(args.log_dir, "best_train.png"))
     val_dl.dataset.plot_predictions(model, filename=os.path.join(args.log_dir, "best_eval.png"))
+    test_dl.dataset.plot_predictions(model, filename=os.path.join(args.log_dir, "best_test.png"))
+
+    # Eval best model on test set
+    logging.info("TEST RESULTS (BEST MODEL)")
+    eval(
+        model=model,
+        val_dl=test_dl,
+        criterion=criterion,
+        metrics=metrics,
+        epoch=args.epochs + 1,
+        args=args,
+    )
+    if args.wandb:
+        metrics.log_to_wandb(args.epochs + 1, "test")
 
     cleanup(args)
 

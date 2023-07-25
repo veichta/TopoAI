@@ -4,8 +4,8 @@ import logging
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import wandb
 
+import wandb
 from src.losses import Criterion
 
 PATCH_SIZE = 16  # pixels per side of square patches
@@ -249,7 +249,7 @@ class Metrics:
         elif epoch > len(self.val_loss) - 1 and mode == "eval":
             raise ValueError(f"Epoch {epoch} is out of range")
 
-        if mode not in ["train", "eval"]:
+        if mode not in ["train", "eval", "test"]:
             raise ValueError(f"Unknown mode {mode}")
 
         if mode == "train":
@@ -277,6 +277,18 @@ class Metrics:
                     "val_f1": self.val_f1[epoch],
                 },
                 step=epoch,
+            )
+        elif mode == "test":
+            wandb.log(
+                {
+                    "test_loss": self.val_loss[epoch],
+                    "test_bce": self.val_bce[epoch],
+                    "test_miou": self.val_miou[epoch],
+                    "test_mse": self.val_mse[epoch],
+                    "test_iou": self.val_iou[epoch],
+                    "test_acc": self.val_acc[epoch],
+                    "test_f1": self.val_f1[epoch],
+                }
             )
 
     def save_metrics(self, filename: str):

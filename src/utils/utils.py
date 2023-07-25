@@ -215,7 +215,7 @@ def get_args() -> argparse.Namespace:
     parser.add_argument(
         "--wandb_dir",
         type=str,
-        default="wandb",
+        default=".",
         help="Wandb directory",
     )
 
