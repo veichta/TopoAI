@@ -150,7 +150,7 @@ def get_args() -> argparse.Namespace:
     parser.add_argument(
         "--miou_weight",
         type=float,
-        default=1.0,
+        default=0.0,
         help="Weight for miou loss",
     )
     parser.add_argument(
@@ -162,15 +162,30 @@ def get_args() -> argparse.Namespace:
     parser.add_argument(
         "--mse_weight",
         type=float,
-        default=1.0,
+        default=0.0,
         help="Weight for mse loss",
     )
     parser.add_argument(
         "--focal_weight",
         type=float,
-        default=1.0,
+        default=0.0,
         help="Weight for focal loss",
     )
+    parser.add_argument(
+        "--cl_dice_weight",
+        type=float,
+        default=0.0,
+        help="weight of cl_dice loss",
+    )
+    
+    parser.add_argument(
+        "--topo_weight",
+        type=float,
+        default=0.0,
+        help="Weight for topograd loss",
+    )
+    
+    #only for spin:
     parser.add_argument(
         "--vec_weight",
         type=float,
@@ -193,7 +208,7 @@ def get_args() -> argparse.Namespace:
         help="Weight for GAPLOSS in loss (should be in [0,1)!)",
     )
 
-    # SOFT CL DICE 
+    # SOFT CL DICE hyperparameters
     parser.add_argument(
         "--soft_skeleton_iter",
         type=float,
@@ -215,19 +230,7 @@ def get_args() -> argparse.Namespace:
         help="for numerical stability in soft cl dice loss calculation",
     )
 
-    parser.add_argument(
-        "--cl_dice_weight",
-        type=float,
-        default=1,
-        help="weight of cl_dice loss",
-    )
-    parser.add_argument(
-        "--topo_weight",
-        type=float,
-        default=0.0,
-        help="Weight for topograd loss",
-    )
-
+    # TOPOLOGICAL LOSS hyperparameters
     parser.add_argument(
         "--topo_k0",
         type=int,
