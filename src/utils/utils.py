@@ -7,8 +7,8 @@ import time
 
 import numpy as np
 import torch
-import wandb
 
+import wandb
 from src.utils.enums import DatasetEnum, ModelsEnum
 
 
@@ -183,7 +183,7 @@ def get_args() -> argparse.Namespace:
         default=0.1,
         help="Weight for vector loss",
     )
-    
+
     # LOSS WEIGHTS
     parser.add_argument(
         "--edge_weight",
@@ -191,7 +191,7 @@ def get_args() -> argparse.Namespace:
         default=0,
         help="Weight for edges in loss (should be in [0,1)!)",
     )
-    
+
     parser.add_argument(
         "--gaploss_weight",
         type=float,
@@ -199,7 +199,7 @@ def get_args() -> argparse.Namespace:
         help="Weight for GAPLOSS in loss (should be in [0,1)!)",
     )
 
-    # SOFT CL DICE 
+    # SOFT CL DICE
     parser.add_argument(
         "--soft_skeleton_iter",
         type=float,
@@ -217,14 +217,14 @@ def get_args() -> argparse.Namespace:
     parser.add_argument(
         "--smoothing",
         type=float,
-        default=1.,
+        default=1.0,
         help="for numerical stability in soft cl dice loss calculation",
     )
 
     parser.add_argument(
         "--cl_dice_weight",
         type=float,
-        default=1,
+        default=0,
         help="weight of cl_dice loss",
     )
 
@@ -293,9 +293,9 @@ def setup(args: argparse.Namespace):
     with open(os.path.join(args.log_dir, "config.json"), "w") as f:
         json.dump(vars(args), f, indent=4)
 
-
-    #either use edge weights or GAPLOSS weights
+    # either use edge weights or GAPLOSS weights
     # assert not (args.edge_weight > 0 and args.gaploss_weight > 0)
+
 
 def cleanup(args: argparse.Namespace):
     """Clean up the environment."""

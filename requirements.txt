@@ -5,3 +5,5 @@ matplotlib
 wandb
 albumentations
 tqdm
+transformers
+
