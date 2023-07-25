@@ -140,12 +140,6 @@ def get_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
-        "--batches_per_epoch",
-        type=int,
-        help="Number of batches per training epoch",
-    )
-
-    parser.add_argument(
         "--patience",
         type=int,
         default=20,
@@ -227,6 +221,33 @@ def get_args() -> argparse.Namespace:
         default=0,
         help="weight of cl_dice loss",
     )
+    parser.add_argument(
+        "--topo_weight",
+        type=float,
+        default=0.0,
+        help="Weight for topograd loss",
+    )
+
+    parser.add_argument(
+        "--topo_k0",
+        type=int,
+        default=3,
+        help="Number of bars to use for topological loss dimension 0",
+    )
+
+    parser.add_argument(
+        "--topo_k1",
+        type=int,
+        default=3,
+        help="Number of bars to use for topological loss dimension 1",
+    )
+
+    parser.add_argument(
+        "--batches_per_epoch",
+        type=int,
+        default=None,
+        help="Number of batches per epoch",
+    )
 
     # LOGGING
     parser.add_argument(
@@ -293,8 +314,10 @@ def setup(args: argparse.Namespace):
     with open(os.path.join(args.log_dir, "config.json"), "w") as f:
         json.dump(vars(args), f, indent=4)
 
-    # either use edge weights or GAPLOSS weights
-    # assert not (args.edge_weight > 0 and args.gaploss_weight > 0)
+    # check loss weights
+    assert args.edge_weight <= 1
+    assert args.gaploss_weight <= 1
+    assert args.edge_weight + args.gaploss_weight <= 1
 
 
 def cleanup(args: argparse.Namespace):

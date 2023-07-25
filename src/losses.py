@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from torchvision.ops import sigmoid_focal_loss
+from topologylayer.nn import LevelSetLayer2D, TopKBarcodeLengths
 
 from .utils.soft_skeleton import soft_skel
 
@@ -134,7 +135,7 @@ class CustomMSELoss(nn.Module):
 
 
 class FocalLoss(nn.Module):
-    def __inti__(self, args, gamma=2, alpha=0.5, size_average=True):
+    def __init__(self, args, gamma=2, alpha=0.5, size_average=True):
         super(FocalLoss, self).__init__()
         self.bce_fn = CustomBCELoss(args, size_average=False)
         self.gamma = gamma
@@ -148,6 +149,55 @@ class FocalLoss(nn.Module):
         return focal_loss.mean() if self.size_average else focal_loss.sum()
 
 
+class TopoGradLoss(nn.Module):
+    def __init__(self, args, k0_max=20, k1_max=20):
+        super(TopoGradLoss, self).__init__()
+        # layer to compute the bars
+        self.layer = LevelSetLayer2D(size=(100,100), maxdim=1, sublevel=False)
+
+        # prior maximize bar lengths for first k0 bars for dimension 0 and k1 bars for dimension 1
+        self.top_k0 = TopKBarcodeLengths(dim=0, k=k0_max)
+        self.top_k1 = TopKBarcodeLengths(dim=1, k=k1_max)
+
+        # maximize the first k0 bars for dimension 0 and k1 bars for dimension 1
+        self.signs_0 = torch.ones(k0_max, device=args.device)
+        self.signs_0[:args.topo_k0] = -1
+
+        self.signs_1 = torch.ones(k1_max, device=args.device)
+        self.signs_1[:args.topo_k1] = -1
+
+
+    def forward(self, inputs):
+
+        loss = 0
+
+        # downsample to make loss computation faster
+        inputs = torch.unsqueeze(inputs, dim=1)
+        inputs = torch.nn.functional.interpolate(inputs, size=(100,100), mode='bicubic')
+        inputs = torch.squeeze(inputs, dim=1)
+
+        for i in range(inputs.shape[0]):
+            
+            # compute bars
+            bars = self.layer(inputs[i])
+
+            # get squared lengths of bars
+            lengths_0 = self.top_k0(bars)**2
+
+            # compute loss for dimension 0 topological features
+            l0 = torch.sum(self.signs_0 * lengths_0)
+
+            # get squared lengths of bars for dimension 1
+            lengths_1 = self.top_k1(bars)**2
+
+            # compute loss for dimension 1 topological features
+            l1 = torch.sum(self.signs_1 * lengths_1)
+
+            loss  += l0 + l1
+
+        return loss / inputs.shape[0]
+   
+
 class Criterion(nn.Module):
     def __init__(self, args):
         super(Criterion, self).__init__()
@@ -157,16 +207,24 @@ class Criterion(nn.Module):
         self.focal_fn = sigmoid_focal_loss
         self.soft_dice_cldice_fn = soft_dice_cldice(args)
 
+        self.topo_fn = TopoGradLoss(args)
+
         self.args = args
 
+        self.topo_loss = 0
+
     def forward(self, inputs, targets, weights):
+
+        if self.args.topo_weight > 0:
+            self.topo_loss = self.topo_fn(inputs) * self.args.topo_weight
+
         miou_loss = self.mIoU_fn(inputs, targets) * self.args.miou_weight
         bce_loss = self.bce_fn(inputs, targets, weights) * self.args.bce_weight
         mse_loss = self.mse_fn(inputs, targets, weights) * self.args.mse_weight
         focal_loss = self.focal_fn(inputs, targets, reduction="mean") * self.args.focal_weight
         cl_dice_loss = self.soft_dice_cldice_fn(inputs, targets) * self.args.cl_dice_weight
 
-        return miou_loss + bce_loss + mse_loss + focal_loss + cl_dice_loss
+        return miou_loss + bce_loss + mse_loss + focal_loss + cl_dice_loss + self.topo_loss
     
 def GapLoss_weights(pred_mask, corner_region = 25, to_plot=False):
     from skimage.morphology import skeletonize
@@ -249,24 +307,18 @@ class soft_dice_cldice(nn.Module):
 
 
 def calculate_weights(pred, edge_weights, args):
-    loss_weights = torch.zeros_like(pred).to(args.device)
+    
+    loss_weights = torch.ones_like(edge_weights, device=pred.device) * (1 - args.edge_weight - args.gaploss_weight)
             
     if args.edge_weight > 0:
         weight = normalize_weights(edge_weights.to(args.device))
-        weight = (1 - args.edge_weight) + args.edge_weight * weight
+        weight = args.edge_weight * weight
         loss_weights += weight
         
     if args.gaploss_weight > 0:
         weight = GapLoss_weights(pred)
         weight = normalize_weights(weight.to(args.device))
-        weight = (1 - args.gaploss_weight) + args.gaploss_weight * weight
+        weight = args.gaploss_weight * weight
         loss_weights += weight.squeeze(1)
-        
-    if args.gaploss_weight == 0 and args.edge_weight == 0:
-        loss_weights = torch.ones_like(pred).to(args.device)
-        
-    if args.gaploss_weight > 0 and args.edge_weight > 0:
-        loss_weights = loss_weights / 2
-        
+
     return loss_weights
-    
