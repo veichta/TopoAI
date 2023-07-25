@@ -141,3 +141,6 @@ dmypy.json
 .pyre/
 
 data.nosync/*
+
+# job script
+sjob.sh
