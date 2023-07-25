@@ -12,12 +12,16 @@
             "justMyCode": true,
             "args": [
                 "--data_path",
-                "data/processed",
+                "data.nosync/processed",
                 "--epochs",
                 "1",
                 "--model",
                 "spin",
                 "--batches_per_epoch",
+                "2",
+                "--gaploss_weight",
+                "0.5",
+                "--batch_size",
                 "2"
             ]
         },
@@ -29,13 +33,17 @@
             "justMyCode": true,
             "args": [
                 "--data_path",
-                "data/processed",
+                "data.nosync/processed",
                 "--epochs",
                 "1",
                 "--model",
                 "unet",
                 "--batches_per_epoch",
-                "2"
+                "2",
+                "--gaploss_weight",
+                "0.5",
+                "--edge_weight",
+                "0.5",
             ]
         },
         {
@@ -46,7 +54,7 @@
             "justMyCode": true,
             "args": [
                 "--data_path",
-                "~/Documents/ETH/CIL/Project/data/data.nosync/processed/",
+                "data.nosync/processed",
                 "--epochs",
                 "100",
                 "--model",
