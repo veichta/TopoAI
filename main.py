@@ -44,6 +44,18 @@ def main():
         model = load_model(model=model, args=args)
         model.to(args.device)
 
+    elif args.model in {
+        ModelsEnum.UperNet_T.value,
+        ModelsEnum.UperNet_B.value,
+        ModelsEnum.UperNet_L.value,
+    }:
+        from src.models.upernet import UperNet, eval, load_model, train_one_epoch
+
+        model = UperNet(args.model)
+        model = load_model(model=model, args=args)
+        model.to(args.device)
+        criterion = Criterion(args)
+
     logging.info(f"Number of trainable parameters: {model.n_trainable_params / 1e6:.2f} M")
 
     train_dl, val_dl, test_dl = get_splits(args.datasets, args)
@@ -106,7 +118,7 @@ def main():
         metrics.save_metrics(os.path.join(args.log_dir, "metrics.json"))
 
         # save best model
-        if metrics.val_loss[-1] == np.min(metrics.val_acc):
+        if metrics.val_acc[-1] == np.max(metrics.val_acc):
             torch.save(model.state_dict(), os.path.join(args.log_dir, "best_model.pt"))
 
     best_epoch = np.argmax(metrics.val_acc)

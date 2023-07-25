@@ -145,7 +145,9 @@ class BaseDataset(torch.utils.data.Dataset):
         weight = torch.from_numpy(weight).float()
 
         image = image.permute(2, 0, 1)
-        image = self.normalize_image(image, self.images[index])
+
+        if not self.args.model.startswith("upernet"):
+            image = self.normalize_image(image, self.images[index])
 
         logging.debug(f"Image shape: {image.shape}")
         logging.debug(f"Mask shape: {mask.shape}")
@@ -187,7 +189,13 @@ class BaseDataset(torch.utils.data.Dataset):
 
         return ((image * std) + mean).permute(1, 2, 0)
 
-    def plot_predictions(self, model: nn.Module, n_samples: int = 5, filename: str = None, args: argparse.Namespace = None) -> None:
+    def plot_predictions(
+        self,
+        model: nn.Module,
+        n_samples: int = 5,
+        filename: str = None,
+        args: argparse.Namespace = None,
+    ) -> None:
         model.eval()
 
         batch = [self[i] for i in range(n_samples)]
