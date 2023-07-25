@@ -98,7 +98,9 @@ def main():
 
         # log metrics
         if epoch % 5 == 0:
-            val_dl.dataset.plot_predictions(model, filename=os.path.join(args.log_dir, "eval.png"))
+            val_dl.dataset.plot_predictions(
+                model, filename=os.path.join(args.log_dir, "eval.png"), args=args
+            )
 
         metrics.plot_metrics(os.path.join(args.log_dir, "metrics.png"))
         metrics.save_metrics(os.path.join(args.log_dir, "metrics.json"))
@@ -132,9 +134,16 @@ def main():
 
     # load best model
     model.load_state_dict(torch.load(os.path.join(args.log_dir, "best_model.pt")))
-    train_dl.dataset.plot_predictions(model, filename=os.path.join(args.log_dir, "best_train.png"))
-    val_dl.dataset.plot_predictions(model, filename=os.path.join(args.log_dir, "best_eval.png"))
-    test_dl.dataset.plot_predictions(model, filename=os.path.join(args.log_dir, "best_test.png"))
+    train_dl.dataset.plot_predictions(
+        model, filename=os.path.join(args.log_dir, "best_train.png"), args=args
+    )
+    val_dl.dataset.plot_predictions(
+        model, filename=os.path.join(args.log_dir, "best_eval.png"), args=args
+    )
+    test_dl.dataset.plot_predictions(
+        model,
+        filename=os.path.join(args.log_dir, "best_test.png"),
+    )
 
     # Eval best model on test set
     logging.info("TEST RESULTS (BEST MODEL)")

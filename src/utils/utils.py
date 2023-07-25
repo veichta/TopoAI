@@ -198,13 +198,36 @@ def get_args() -> argparse.Namespace:
         default=0,
         help="Weight for GAPLOSS in loss (should be in [0,1)!)",
     )
-    
+
+    # SOFT CL DICE 
     parser.add_argument(
-        "--gaploss_k",
+        "--soft_skeleton_iter",
         type=float,
-        default=2,
-        help="Hyperparameter for GapLoss"
+        default=5,
+        help="number of iterations for soft skeletonization",
     )
+
+    parser.add_argument(
+        "--alpha",
+        type=float,
+        default=0.5,
+        help="convex combination between soft dice and soft cl dice, value in range [0, 0.5]",
+    )
+
+    parser.add_argument(
+        "--smoothing",
+        type=float,
+        default=1.,
+        help="for numerical stability in soft cl dice loss calculation",
+    )
+
+    parser.add_argument(
+        "--cl_dice_weight",
+        type=float,
+        default=1,
+        help="weight of cl_dice loss",
+    )
+
     # LOGGING
     parser.add_argument(
         "--wandb",
