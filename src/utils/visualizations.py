@@ -1,11 +1,12 @@
 import argparse
+
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
 import wandb
-
 from src.losses import calculate_weights
+
 
 def overlay_image_mask(img: np.ndarray, mask: np.ndarray, alpha: float = 0.5) -> np.ndarray:
     """Overlay image and mask.
@@ -36,8 +37,8 @@ def plot_predictions(
     fig, ax = plt.subplots(num_images, 3, figsize=(15, num_images * 5))
     if weights is not None:
         loss_weights = calculate_weights(predictions, weights, args).detach().cpu().numpy()
-        
-    for i in range(num_images):            
+
+    for i in range(num_images):
         img = images[i].detach().cpu().numpy()
         prediction = predictions[i].detach().cpu().numpy()
         overlay = overlay_image_mask(img, prediction)
@@ -62,7 +63,8 @@ def plot_predictions(
     ax[0, 0].set_title("Image + Mask")
     ax[0, 1].set_title("Mask")
     ax[0, 2].set_title("Weight")
-    plt.colorbar(ax[0, 2].imshow(loss_weights[0]), ax=ax[:, 2], shrink=0.5)
+    if weights is not None:
+        plt.colorbar(ax[0, 2].imshow(loss_weights[0]), ax=ax[:, 2], shrink=0.5)
 
     if filename is not None:
         plt.savefig(filename)
