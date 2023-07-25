@@ -345,6 +345,7 @@ class Metrics:
                     "test_iou": self.val_iou[epoch],
                     "test_acc": self.val_acc[epoch],
                     "test_f1": self.val_f1[epoch],
+                    "test_cl_dice": self.val_cl_dice[epoch],
                 }
             )
 
