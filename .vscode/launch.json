@@ -54,13 +54,11 @@
             "justMyCode": true,
             "args": [
                 "--data_path",
-                "data.nosync/processed",
+                "/home/alex/Documents/ETH/CIL/Project/data/data.nosync/processed/",
                 "--epochs",
                 "100",
                 "--model",
                 "unet++",
-                "--batches_per_epoch",
-                "2",
                 "--device",
                 "cuda",
                 "--log_dir",
@@ -73,7 +71,9 @@
                 "4",
                 "--wandb",
                 "--wandb_dir",
-                "~/Documents/ETH/CIL/Project/wandb/"
+                "~/Documents/ETH/CIL/Project/wandb/",
+                "--cl_dice_weight",
+                "1"
             ]
         }
     ]
