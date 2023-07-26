@@ -145,7 +145,6 @@ class BaseDataset(torch.utils.data.Dataset):
         weight = torch.from_numpy(weight).float()
 
         image = image.permute(2, 0, 1)
-
         if not self.args.model.startswith("upernet"):
             image = self.normalize_image(image, self.images[index])
 
@@ -189,13 +188,7 @@ class BaseDataset(torch.utils.data.Dataset):
 
         return ((image * std) + mean).permute(1, 2, 0)
 
-    def plot_predictions(
-        self,
-        model: nn.Module,
-        n_samples: int = 5,
-        filename: str = None,
-        args: argparse.Namespace = None,
-    ) -> None:
+    def plot_predictions(self, model: nn.Module, n_samples: int = 5, filename: str = None, args: argparse.Namespace = None) -> None:
         model.eval()
 
         batch = [self[i] for i in range(n_samples)]
@@ -260,24 +253,17 @@ def get_splits(datasets: List[str], args: argparse.Namespace):
         train_images = [
             image
             for image in train_images
-            if any(dataset in image.split("/")[-1] for dataset in datasets) \
-                and "104_cil" not in image.split("/")[-1] \
-                and "80_cil" not in image.split("/")[-1]
-            # removing outliers
+            if any(dataset in image.split("/")[-1] for dataset in datasets)
         ]
         train_masks = [
             mask
             for mask in train_masks
-            if any(dataset in mask.split("/")[-1] for dataset in datasets) \
-                and "104_cil" not in mask.split("/")[-1] \
-                and "80_cil" not in mask.split("/")[-1]
+            if any(dataset in mask.split("/")[-1] for dataset in datasets)
         ]
         train_weights = [
             weight
             for weight in train_weights
-            if any(dataset in weight.split("/")[-1] for dataset in datasets) \
-                and "104_cil" not in weight.split("/")[-1] \
-                and "80_cil" not in weight.split("/")[-1]
+            if any(dataset in weight.split("/")[-1] for dataset in datasets)
         ]
 
         val_images = [
