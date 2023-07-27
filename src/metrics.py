@@ -314,13 +314,6 @@ class Metrics:
                 },
                 step=epoch,
             )
-            if self.loss_fn.args.topo_weight > 0:
-                wandb.log(
-                    {
-                        "train_topo": self.train_topo[epoch],
-                    },
-                    step=epoch,
-                )
         elif mode == "eval":
             wandb.log(
                 {
