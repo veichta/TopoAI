@@ -13,11 +13,12 @@ from src.metrics import Metrics
 
 
 class UperNet(nn.Module):
-    def __init__(self, backbone: str = "tiny") -> None:
+    def __init__(self, backbone: str = "upernet-t", freeze_backbone: bool = True) -> None:
         """UperNet model for semantic segmentation.
 
         Args:
             backbone (str): Backbone to use. One of {"tiny", "base", "large"}.
+            freeze_backbone (bool): Whether to freeze the backbone.
         """
         super().__init__()
         assert backbone in {"upernet-t", "upernet-b", "upernet-l"}
@@ -29,15 +30,27 @@ class UperNet(nn.Module):
             f"openmmlab/upernet-convnext-{size}"
         )
 
-        self.upernet.decode_head.classifier = nn.Conv2d(
-            in_channels=512, out_channels=1, kernel_size=1, stride=1
+        # self.upernet.decode_head.classifier = nn.Conv2d(
+        #     in_channels=512, out_channels=1, kernel_size=1, stride=1
+        # )
+        self.upernet.decode_head.classifier = nn.Sequential(
+            nn.Conv2d(in_channels=512, out_channels=256, kernel_size=1, stride=1),
+            nn.ReLU(),
+            nn.Conv2d(in_channels=256, out_channels=1, kernel_size=1, stride=1),
         )
 
         self.processor = AutoImageProcessor.from_pretrained(f"openmmlab/upernet-convnext-{size}")
 
         # freeze backbone
-        for param in self.upernet.backbone.parameters():
-            param.requires_grad = False
+        if freeze_backbone:
+            for param in self.upernet.backbone.parameters():
+                param.requires_grad = False
+
+        # freeze decoder except last layer
+        # for param in self.upernet.decode_head.parameters():
+        #     param.requires_grad = False
+        # for param in self.upernet.decode_head.classifier.parameters():
+        #     param.requires_grad = True
 
         self.n_trainable_params = sum(p.numel() for p in self.parameters() if p.requires_grad)
 

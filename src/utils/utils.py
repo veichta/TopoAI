@@ -109,6 +109,11 @@ def get_args() -> argparse.Namespace:
         default=2,
         help="Number of stacks in SPIN",
     )
+    parser.add_argument(
+        "--freeze_backbone",
+        action="store_true",
+        help="Freeze backbone of UperNet",
+    )
 
     # TRAINING
     parser.add_argument(
@@ -177,15 +182,15 @@ def get_args() -> argparse.Namespace:
         default=0.0,
         help="weight of cl_dice loss",
     )
-    
+
     parser.add_argument(
         "--topo_weight",
         type=float,
         default=0.0,
         help="Weight for topograd loss",
     )
-    
-    #only for spin:
+
+    # only for spin:
     parser.add_argument(
         "--vec_weight",
         type=float,

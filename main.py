@@ -51,7 +51,7 @@ def main():
     }:
         from src.models.upernet import UperNet, eval, load_model, train_one_epoch
 
-        model = UperNet(args.model)
+        model = UperNet(args.model, args.freeze_backbone)
         model = load_model(model=model, args=args)
         model.to(args.device)
         criterion = Criterion(args)
