@@ -296,8 +296,8 @@ def setup(args: argparse.Namespace):
     # setup wandb
     if args.wandb:
         wandb.init(
-            project="DiffusionRoads",
-            entity="diffusion-roads",
+            project="TopoRoads",
+            entity="topo_roads",
             config=vars(get_args()),
             dir=args.wandb_dir,
         )
