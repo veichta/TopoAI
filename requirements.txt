@@ -6,6 +6,5 @@ wandb
 albumentations
 tqdm
 scikit-image
-git+https://github.com/bruel-gabrielsson/TopologyLayer.git
 transformers
 
