@@ -7,8 +7,8 @@ import time
 
 import numpy as np
 import torch
-
 import wandb
+
 from src.utils.enums import DatasetEnum, ModelsEnum
 
 
@@ -50,7 +50,7 @@ def get_args() -> argparse.Namespace:
     parser.add_argument(
         "--data_path",
         type=str,
-        default="data.nosync/processed",
+        default="data",
         help="Path to data",
     )
 
@@ -73,7 +73,7 @@ def get_args() -> argparse.Namespace:
     parser.add_argument(
         "--num_workers",
         type=int,
-        default=8,
+        default=0,
         help="Number of workers for dataloader",
     )
 
