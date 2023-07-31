@@ -1,12 +1,12 @@
 # TopoAI: Topological Approaches for Improved Structural Correctness
 
 ## Team
-| Name                 | Email               | Github      |
-| -------------------- | ------------------- | ----------- |
-| Alexander Spiridonov | aspiridonov@ethz.ch | aspiridon0v |
-| Alexander Veicht     | veichta@ethz.ch     | veichta     |
-| András Strausz       | strausza@ethz.ch    | strausza    |
-| Richard Danis        | richdanis@ethz.ch   | richdanis   |
+| Name                 | Email               | Github                                        |
+| -------------------- | ------------------- | --------------------------------------------- |
+| Alexander Spiridonov | aspiridonov@ethz.ch | [aspiridon0v](https://github.com/aspiridon0v) |
+| Alexander Veicht     | veichta@ethz.ch     | [veichta](https://github.com/veichta)         |
+| András Strausz       | strausza@ethz.ch    | [strausza](https://github.com/strausza)       |
+| Richard Danis        | richdanis@ethz.ch   | [richdanis](https://github.com/richdanis)     |
 ## Setup
 ```bash
 python -m venv venv
@@ -52,7 +52,6 @@ data
 This can be achieved by running the following commands:
 ```bash
 unzip data.zip
-rm data.zip
 ```
 ### Splitting the Data
 In order to split the data into train, val and test sets, run the following command:
