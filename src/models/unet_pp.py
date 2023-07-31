@@ -6,8 +6,8 @@ import torch
 import torch.nn as nn
 from tqdm import tqdm
 
-from src.metrics import Metrics
 from src.losses import calculate_weights
+from src.metrics import Metrics
 
 
 class Block(nn.Module):
@@ -27,8 +27,15 @@ class Block(nn.Module):
 
 
 class UNetPlus(nn.Module):
-    # UNet-like architecture for single class semantic segmentation.
+    # UNet++ architecture for single class semantic segmentation.
+
     def __init__(self, chs=(3, 64, 128, 256, 512, 1024)):
+        """UNet++ model.
+
+        Args:
+            chs (tuple, optional): Number of channels in each layer. Defaults to (3, 64, 128, 256,
+            512, 1024).
+        """
         super().__init__()
         enc_chs = chs  # number of channels in the encoder
         dec_chs = chs[::-1][:-1]  # number of channels in the decoder
@@ -184,9 +191,9 @@ def eval(
         for img, mask, weight in val_dl:
             img = img.to(args.device)
             mask = mask.to(args.device)
-            
+
             out = model(img)
-            
+
             weight = calculate_weights(out, weight, args)
 
             metrics.update(out, mask, weight)
@@ -233,9 +240,9 @@ def train_one_epoch(
         mask = mask.to(args.device)
 
         out = model(img)
-        
+
         weight = calculate_weights(out, weight, args)
-        
+
         loss = criterion(out, mask, weight)
         if args.topo_weight > 0:
             topo_loss_avg += criterion.topo_loss.item() * img.shape[0]
@@ -253,7 +260,6 @@ def train_one_epoch(
         )
         pbar.update()
 
-
     pbar.close()
     topo_loss_avg /= len(train_dl)
     metrics.train_topo.append(topo_loss_avg)
@@ -261,7 +267,6 @@ def train_one_epoch(
 
 
 class UPlusLoss(nn.Module):
-
     # loss used in the paper
     # TODO: implement dice loss
 
@@ -271,5 +276,4 @@ class UPlusLoss(nn.Module):
         self.bce_loss = nn.BCELoss(reduction="mean")
 
     def forward(self, outputs, masks):
-
         return self.bce_loss(outputs, masks)

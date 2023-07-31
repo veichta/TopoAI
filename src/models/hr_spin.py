@@ -170,6 +170,18 @@ class HRSPIN(nn.Module):
         hg_num_blocks=3,
         depth=3,
     ):
+        """HRSPIN model.
+
+        Args:
+            task1_classes (int, optional): Number of classes for segmentation. Defaults to 1.
+            task2_classes (int, optional): Number of classes for angle estimation. Defaults to 37.
+            block (BasicResnetBlock, optional): Residual block. Defaults to BasicResnetBlock.
+            in_channels (int, optional): Number of input channels. Defaults to 3.
+            num_stacks (int, optional): Number of stacks. Defaults to 2.
+            num_blocks (int, optional): Number of blocks. Defaults to 1.
+            hg_num_blocks (int, optional): Number of blocks in hourglass. Defaults to 3.
+            depth (int, optional): Depth of hourglass. Defaults to 3.
+        """
         super(HRSPIN, self).__init__()
 
         self.inplanes = 64
@@ -346,6 +358,14 @@ class SPINCriterion(nn.Module):
         loss_fn: nn.Module,
         args: argparse.Namespace,
     ):
+        """SPIN criterion.
+
+        Calculates the loss for the SPIN model at each stack and adds them together.
+
+        Args:
+            loss_fn (nn.Module): Loss function.
+            args (argparse.Namespace): Arguments.
+        """
         super().__init__()
         self.loss_fn = loss_fn
 
@@ -374,7 +394,7 @@ def load_model(model: nn.Module, args: argparse.Namespace) -> nn.Module:
 
     Args:
         model (nn.Module): Model to load.
-        args (argparse.Namespace): _description_
+        args (argparse.Namespace): Arguments.
 
     Raises:
         ValueError: If no model path is specified.
@@ -406,7 +426,7 @@ def train_one_epoch(
     """Train the model for one epoch.
 
     Args:
-        model (BaseUNet): BaseUNet model.
+        model (HRSPIN): SPIN model.
         train_dl (torch.utils.data.DataLoader): Training data loader.
         optimizer (torch.optim.Optimizer): Optimizer.
         criterion (nn.Module): Loss function.
@@ -428,12 +448,15 @@ def train_one_epoch(
         vec = [v.to(args.device) for v in vec]
 
         mask_pred, vec_pred = model(img)
+
+        # calculate loss weights
         loss_weight = [calculate_weights(mask_pred[0], weight[0], args)]
         for i in range(len(mask_pred) - 1):
             loss_weight.append(calculate_weights(mask_pred[i + 1], weight[i], args))
 
         loss = criterion(mask_pred, vec_pred, mask, vec, loss_weight)
 
+        # get correct prediction and calculate metrics
         mask = mask[-1]
         mask_pred = mask_pred[-1]
         loss_weight = loss_weight[-1]
@@ -492,11 +515,14 @@ def eval(
 
             mask_pred, vec_pred = model(img)
 
+            # calculate loss weights
             loss_weight = [calculate_weights(mask_pred[0], weight[0], args)]
             for i in range(len(mask_pred) - 1):
                 loss_weight.append(calculate_weights(mask_pred[i + 1], weight[i], args))
+
             loss = criterion(mask_pred, vec_pred, mask, vec, loss_weight)
 
+            # get correct prediction and calculate metrics
             mask = mask[-1]
             loss_weight = loss_weight[-1]
             mask_pred = mask_pred[-1]

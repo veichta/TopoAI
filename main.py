@@ -16,7 +16,7 @@ def main():
     args = get_args()
     setup(args)
 
-    # get model and criterion
+    # Setup model and criterion
     chs = [3] + [2 ** (i + args.width) for i in range(args.depth)]
     if args.model == ModelsEnum.UNET.value:
         from src.models.base_unet import BaseUNet, eval, load_model, train_one_epoch
@@ -44,11 +44,7 @@ def main():
         model = load_model(model=model, args=args)
         model.to(args.device)
 
-    elif args.model in {
-        ModelsEnum.UperNet_T.value,
-        ModelsEnum.UperNet_B.value,
-        ModelsEnum.UperNet_L.value,
-    }:
+    elif args.model.startswith("upernet"):
         from src.models.upernet import UperNet, eval, load_model, train_one_epoch
 
         model = UperNet(args.model, args.freeze_backbone)
@@ -58,35 +54,39 @@ def main():
 
     logging.info(f"Number of trainable parameters: {model.n_trainable_params / 1e6:.2f} M")
 
+    # get data
     train_dl, val_dl, test_dl = get_splits(args.datasets, args)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+    # Setup training
+    if args.model.startswith("upernet"):
+        optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr)
+    else:
+        optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode="min", factor=0.1, patience=args.patience, verbose=True
     )
-    # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-    #     optimizer, args.epochs // 5, args.lr / 10
-    # )
 
     metrics = Metrics(Criterion(args).to(args.device))
 
+    # Eval model
     if args.eval:
         eval(
             model=model,
-            val_dl=val_dl,
+            val_dl=test_dl,
+            criterion=criterion,
             metrics=metrics,
             epoch=0,
             args=args,
         )
 
-        val_dl.dataset.plot_predictions(
-            model,
-            filename=os.path.join(args.log_dir, "eval.png"),
-            plot_Gaploss=args.gaploss_weight > 0,
+        test_dl.dataset.plot_predictions(
+            model, filename=os.path.join(args.log_dir, "eval.png"), args=args
         )
         metrics.save_metrics(os.path.join(args.log_dir, "metrics.json"))
         return
 
+    # Train model
     for epoch in range(args.epochs):
         train_one_epoch(
             model=model,
@@ -106,7 +106,6 @@ def main():
             args=args,
         )
         scheduler.step(metrics.val_loss[-1])
-        # scheduler.step()
 
         # log metrics
         if epoch % 5 == 0:
@@ -121,15 +120,16 @@ def main():
         if metrics.val_acc[-1] == np.max(metrics.val_acc):
             torch.save(model.state_dict(), os.path.join(args.log_dir, "best_model.pt"))
 
+        # store last model
+        torch.save(model.state_dict(), os.path.join(args.log_dir, "last_model.pt"))
+
+    # Evaluate model
     best_epoch = np.argmax(metrics.val_acc)
     logging.info(f"Best epoch: {best_epoch + 1}")
     metrics.print_metrics(best_epoch, "eval")
 
     if args.wandb:
         metrics.log_to_wandb(best_epoch, "eval")
-
-    # store last model
-    torch.save(model.state_dict(), os.path.join(args.log_dir, "last_model.pt"))
 
     # Eval last model on test set
     logging.info("TEST RESULTS (LAST MODEL)")

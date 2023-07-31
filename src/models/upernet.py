@@ -14,7 +14,7 @@ from src.metrics import Metrics
 
 class UperNet(nn.Module):
     def __init__(self, backbone: str = "upernet-t", freeze_backbone: bool = True) -> None:
-        """UperNet model for semantic segmentation.
+        """UperNet model for semantic segmentation using ConvNext backbone.
 
         Args:
             backbone (str): Backbone to use. One of {"tiny", "base", "large"}.
@@ -30,9 +30,6 @@ class UperNet(nn.Module):
             f"openmmlab/upernet-convnext-{size}"
         )
 
-        # self.upernet.decode_head.classifier = nn.Conv2d(
-        #     in_channels=512, out_channels=1, kernel_size=1, stride=1
-        # )
         self.upernet.decode_head.classifier = nn.Sequential(
             nn.Conv2d(in_channels=512, out_channels=256, kernel_size=1, stride=1),
             nn.ReLU(),
@@ -46,12 +43,6 @@ class UperNet(nn.Module):
             for param in self.upernet.backbone.parameters():
                 param.requires_grad = False
 
-        # freeze decoder except last layer
-        # for param in self.upernet.decode_head.parameters():
-        #     param.requires_grad = False
-        # for param in self.upernet.decode_head.classifier.parameters():
-        #     param.requires_grad = True
-
         self.n_trainable_params = sum(p.numel() for p in self.parameters() if p.requires_grad)
 
     def forward(self, batch: torch.tensor) -> torch.tensor:
@@ -60,6 +51,7 @@ class UperNet(nn.Module):
         batch = self.processor(images=batch, return_tensors="pt")
         batch["pixel_values"] = batch["pixel_values"].to(next(self.parameters()).device)
 
+        # forward pass
         out = self.upernet(**batch)
         logits = out.logits
 
@@ -112,7 +104,7 @@ def train_one_epoch(
     """Train the model for one epoch.
 
     Args:
-        model (BaseUNet): BaseUNet model.
+        model (UperNet): Upernet model.
         train_dl (torch.utils.data.DataLoader): Training data loader.
         optimizer (torch.optim.Optimizer): Optimizer.
         criterion (nn.Module): Loss function.
@@ -171,7 +163,7 @@ def eval(
     """Evaluate the model on the validation set.
 
     Args:
-        model (nn.Module): UNet++ model.
+        model (UperNet): Upernet model.
         val_dl (torch.utils.data.DataLoader): Validation data loader.
         criterion (nn.Module): Loss function.
         metrics (Metrics): Metrics object.

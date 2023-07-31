@@ -2,9 +2,10 @@ import argparse
 import json
 import logging
 import os
-from typing import List
+from typing import List, Tuple
 
 import albumentations as A
+import numpy as np
 import torch
 import torchvision
 from torch import nn
@@ -64,7 +65,7 @@ class BaseDataset(torch.utils.data.Dataset):
         """Return the length of the dataset."""
         return len(self.images)
 
-    def getOrientationGT(self, keypoints, height, width):
+    def getOrientationGT(self, keypoints: List, height: int, width: int) -> torch.tensor:
         """Create Orientation Ground Truth
 
         Args:
@@ -75,14 +76,26 @@ class BaseDataset(torch.utils.data.Dataset):
         Returns:
             vecmap_angle (torch.tensor): Orientation Ground Truth in the shape of (h, w).
         """
-        vecmap, vecmap_angles = affinity_utils.getVectorMapsAngles(
+        _, vecmap_angles = affinity_utils.getVectorMapsAngles(
             (height, width), keypoints, theta=self.angle_theta, bin_size=10
         )
         vecmap_angles = torch.from_numpy(vecmap_angles)
 
         return vecmap_angles
 
-    def get_spin_out(self, image, mask, weight):
+    def get_spin_out(
+        self, image: np.ndarray, mask: np.ndarray, weight: np.ndarray
+    ) -> Tuple[List, List, List]:
+        """Get the output of for SPIN model.
+
+        Args:
+            image (np.ndarray): Array of the images.
+            mask (np.ndarray): Array of the masks.
+            weight (np.ndarray): Array of the weights.
+
+        Returns:
+            Tuple[List, List, List]: List of masks, weights and vecmap angles.
+        """
         labels = []
         weights = []
         vecmap_angles = []
@@ -188,7 +201,13 @@ class BaseDataset(torch.utils.data.Dataset):
 
         return ((image * std) + mean).permute(1, 2, 0)
 
-    def plot_predictions(self, model: nn.Module, n_samples: int = 5, filename: str = None, args: argparse.Namespace = None) -> None:
+    def plot_predictions(
+        self,
+        model: nn.Module,
+        n_samples: int = 5,
+        filename: str = None,
+        args: argparse.Namespace = None,
+    ) -> None:
         model.eval()
 
         batch = [self[i] for i in range(n_samples)]

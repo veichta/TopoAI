@@ -6,8 +6,8 @@ import torch
 import torch.nn as nn
 from tqdm import tqdm
 
-from src.metrics import Metrics
 from src.losses import calculate_weights
+from src.metrics import Metrics
 
 
 class Block(nn.Module):
@@ -29,6 +29,12 @@ class Block(nn.Module):
 class BaseUNet(nn.Module):
     # UNet-like architecture for single class semantic segmentation.
     def __init__(self, chs=(3, 64, 128, 256, 512, 1024)):
+        """UNet model.
+
+        Args:
+            chs (tuple, optional): Number of channels in each layer. Defaults to (3, 64, 128, 256,
+            512, 1024).
+        """
         super().__init__()
         enc_chs = chs  # number of channels in the encoder
         dec_chs = chs[::-1][:-1]  # number of channels in the decoder
@@ -122,7 +128,7 @@ def eval(
 
             out = model(img)
             weight = calculate_weights(out, weight, args)
-            
+
             metrics.update(out, mask, weight)
 
             pbar.set_postfix(
@@ -166,9 +172,9 @@ def train_one_epoch(
         mask = mask.to(args.device)
 
         out = model(img)
-        
+
         weight = calculate_weights(out, weight, args)
-        
+
         loss = criterion(out, mask, weight)
 
         metrics.update(out, mask, weight)
