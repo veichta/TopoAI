@@ -24,7 +24,7 @@ pip install -e .
 
 The preprocessed data can be downloaded using the following command:
 ```bash
-wget https://polybox.ethz.ch/index.php/s/KhsD19D0iLEmyTH/download
+wget https://polybox.ethz.ch/index.php/s/KhsD19D0iLEmyTH/download -O data.zip
 ```
 
 The data is expected to have the following structure:
