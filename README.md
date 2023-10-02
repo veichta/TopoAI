@@ -1,5 +1,7 @@
 # TopoAI: Topological Approaches for Improved Structural Correctness
 
+Course Project for the Computational Intelligence Lab (CIL) 2023 at ETH Zurich focusing on satelite road segmentation.
+
 ## Team
 | Name                 | Email               | Github                                        |
 | -------------------- | ------------------- | --------------------------------------------- |
